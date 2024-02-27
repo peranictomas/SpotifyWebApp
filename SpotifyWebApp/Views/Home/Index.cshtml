@@ -1,0 +1,15 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+@if (User.Identity.IsAuthenticated)
+{
+    <h2>Welcome, @User.FindFirst("urn:spotify:displayname")?.Value!</h2>
+    <p>Email: @ViewBag.Email</p>
+    <a class="btn btn-danger" href="/Home/Logout">Logout</a>
+}
+else
+{
+    <p>You are not authenticated with Spotify. Please sign in.</p>
+    <a class="btn btn-primary" href="/signin-spotify">Login with Spotify</a>
+}
