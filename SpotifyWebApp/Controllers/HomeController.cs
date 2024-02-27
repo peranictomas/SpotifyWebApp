@@ -15,10 +15,14 @@ public class HomeController : Controller
         _httpClientFactory = httpClientFactory;
         _httpContextAccessor = httpContextAccessor;
     }
-
+    public IActionResult Index()
+    {
+        
+        return View();
+    }
 
     [Authorize]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> SignIn()
     {
         var accessToken = await HttpContext.GetTokenAsync("access_token");
 
@@ -34,7 +38,7 @@ public class HomeController : Controller
             ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
         }
 
-        return View();
+        return View("Index");
     }
     public async Task<IActionResult> Logout()
     {
