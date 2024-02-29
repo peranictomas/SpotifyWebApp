@@ -32,10 +32,22 @@ public class HomeController : Controller
         var response = await client.GetAsync("https://api.spotify.com/v1/me");
         if (response.IsSuccessStatusCode)
         {
+            var settings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore // Ignore null values during deserialization
+            };
             var content = await response.Content.ReadAsStringAsync();
-            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(content);
+            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(content, settings);
+            
 
             ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
+            ViewBag.DisplayName = spotifyUser.DisplayName;
+            ViewBag.SpotifyUserProfileImage = spotifyUser.Images.FirstOrDefault()?.Url;
+            ViewBag.ID = spotifyUser.ID;
+            ViewBag.Country = spotifyUser?.Country;
+            ViewBag.AccountType = spotifyUser.AccountType;
+            ViewBag.Followers = spotifyUser.Followers.Total;
+
         }
 
         return View("Index");

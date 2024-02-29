@@ -4,8 +4,13 @@
 
 @if (User.Identity.IsAuthenticated)
 {
-    <h2>Welcome, @User.FindFirst("urn:spotify:displayname")?.Value!</h2>
+    <h2>Welcome, @ViewBag.DisplayName</h2>
     <p>Email: @ViewBag.Email</p>
+    <p>ID: @ViewBag.ID</p>
+    <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
+    <p>Country: @ViewBag.Country</p>
+    <p>Account Type: @ViewBag.AccountType</p>
+    <p>Number of Followers: @ViewBag.Followers</p>
     <a class="btn btn-danger" href="/Home/Logout">Logout</a>
 }
 else
