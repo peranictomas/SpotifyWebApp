@@ -28,6 +28,7 @@ builder.Services.AddAuthentication(options =>
     options.TokenEndpoint = "https://accounts.spotify.com/api/token";
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
+    options.Scope.Add("user-top-read");
     options.SaveTokens = true;
     options.ClaimActions.MapJsonKey("urn:spotify:displayname", "display_name");
     options.ClaimActions.MapJsonKey("urn:spotify:email", "email");

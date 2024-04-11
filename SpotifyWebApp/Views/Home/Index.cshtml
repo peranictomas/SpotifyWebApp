@@ -12,6 +12,25 @@
     <p>Account Type: @ViewBag.AccountType</p>
     <p>Number of Followers: @ViewBag.Followers</p>
     <a class="btn btn-danger" href="/Home/Logout">Logout</a>
+
+    @if (ViewBag.Artists != null)
+    {
+        <h2>Top Artists</h2>
+        <ul>
+            @foreach (var artist in ViewBag.Artists)
+            {
+                <li>
+                    @artist.Name <img src="@artist.ImageTest" alt="Spotify Profile Image" />
+
+                    
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No artists found.</p>
+    }
 }
 else
 {

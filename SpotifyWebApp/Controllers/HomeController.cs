@@ -29,16 +29,44 @@ public class HomeController : Controller
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await client.GetAsync("https://api.spotify.com/v1/me");
-        if (response.IsSuccessStatusCode)
+        //var response = await client.GetAsync("https://api.spotify.com/v1/me");
+
+        var profileEndpoint = "https://api.spotify.com/v1/me";
+        var artistEndpoint = "https://api.spotify.com/v1/me/top/artists?limit=5";
+
+        var profileTask = client.GetAsync(profileEndpoint);
+        var artistTask = client.GetAsync(artistEndpoint);
+
+        await Task.WhenAll(profileTask, artistTask);
+
+        var profileResponse = await profileTask;
+        var artistResponse = await artistTask;
+
+        if (profileResponse.IsSuccessStatusCode && artistResponse.IsSuccessStatusCode)
         {
-            var settings = new JsonSerializerSettings
+            var settings = new JsonSerializerSettings{ NullValueHandling = NullValueHandling.Ignore};
+            var contentProfile = await profileResponse.Content.ReadAsStringAsync();
+            var contentArtist =  await artistResponse.Content.ReadAsStringAsync();
+            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(contentProfile, settings);
+            var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
+
+            if (spotifyArtist != null)
             {
-                NullValueHandling = NullValueHandling.Ignore // Ignore null values during deserialization
-            };
-            var content = await response.Content.ReadAsStringAsync();
-            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(content, settings);
-            
+                foreach (var artist in spotifyArtist.Items)
+                {
+                    if (artist.Image != null && artist.Image.Count > 0)
+                    {
+                        // Get the last image from the list and assign it back to the Image property
+                        artist.Image = new List<SpotifyImage> { artist.Image.Last() };
+                        artist.ImageTest = artist.Image.FirstOrDefault()?.Url;
+                    }
+                }
+            }
+            else
+            {
+                // Handle the case when spotifyArtists is null
+            }
+
 
             ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
             ViewBag.DisplayName = spotifyUser.DisplayName;
@@ -47,6 +75,11 @@ public class HomeController : Controller
             ViewBag.Country = spotifyUser?.Country;
             ViewBag.AccountType = spotifyUser.AccountType;
             ViewBag.Followers = spotifyUser.Followers.Total;
+
+            ViewBag.Artists = spotifyArtist.Items;
+            
+
+
 
         }
 
