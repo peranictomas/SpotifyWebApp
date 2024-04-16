@@ -1,12 +1,17 @@
 ﻿using Newtonsoft.Json;
+
 namespace SpotifyWebApp.Models
 {
-    public class SpotifyArtist
+    public class SpotifyAlbum
     {
-        [JsonProperty("name")]
-        public string Name { get; set; }
+
         [JsonProperty("images")]
         public List<SpotifyImage> Image { get; set; }
         public string FirstImageUrl { get; set; }
+        [JsonProperty("artists")]
+        public List<SpotifyArtist> Artists { get; set; }
+
+        public string stringArtists { get; set; }
+
     }
 }

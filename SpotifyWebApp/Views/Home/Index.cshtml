@@ -5,12 +5,7 @@
 @if (User.Identity.IsAuthenticated)
 {
     <h2>Welcome, @ViewBag.DisplayName</h2>
-    <p>Email: @ViewBag.Email</p>
-    <p>ID: @ViewBag.ID</p>
     <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
-    <p>Country: @ViewBag.Country</p>
-    <p>Account Type: @ViewBag.AccountType</p>
-    <p>Number of Followers: @ViewBag.Followers</p>
     <a class="btn btn-danger" href="/Home/Logout">Logout</a>
 
     @if (ViewBag.Artists != null)
@@ -20,7 +15,7 @@
             @foreach (var artist in ViewBag.Artists)
             {
                 <li>
-                    @artist.Name <img src="@artist.ImageTest" alt="Spotify Profile Image" />
+                    @artist.Name <img src="@artist.FirstImageUrl" alt="Spotify Profile Image" />
 
                     
                 </li>
@@ -30,6 +25,27 @@
     else
     {
         <p>No artists found.</p>
+    }
+    @if (ViewBag.Tracks != null)
+    {
+        <h2>Top Tracks</h2>
+        <ul>
+            @foreach (var song in ViewBag.Tracks)
+            {
+                <li>
+                    <img src="@song.Album.FirstImageUrl" alt="Spotify Profile Image" />
+                    <p>
+                        @song.Name FT. @song.Album.stringArtists
+                    </p>
+
+
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No tracks found.</p>
     }
 }
 else

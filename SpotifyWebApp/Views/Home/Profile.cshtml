@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Profile";
+}
+<h1>@ViewData["Title"]</h1>
+
+@if (User.Identity.IsAuthenticated)
+{
+    <h2>Hello, @ViewBag.DisplayName</h2>
+    <p>Email: @ViewBag.Email</p>
+    <p>ID: @ViewBag.ID</p>
+    <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
+    <p>Country: @ViewBag.Country</p>
+    <p>Account Type: @ViewBag.AccountType</p>
+    <p>Number of Followers: @ViewBag.Followers</p>
+    <a class="btn btn-danger" href="/Home/Logout">Logout</a>
+}
+else
+{
+    <p>You are not authenticated with Spotify. Please sign in.</p>
+    //<a class="btn btn-primary" href="/signin-spotify">Login with Spotify</a>
+    <a asp-action="SignIn">Click here to login</a>
+}
+
