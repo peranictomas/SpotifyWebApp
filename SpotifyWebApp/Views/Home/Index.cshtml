@@ -1,52 +1,24 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
+<style>
+    #sideIcons{
+        font-size: 5em;
+    }
+</style>
 
 @if (User.Identity.IsAuthenticated)
 {
-    <h2>Welcome, @ViewBag.DisplayName</h2>
-    <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
-    <a class="btn btn-danger" href="/Home/Logout">Logout</a>
+    <a class="btn btn-info" href="/Home/Artists">Artists <i class="fa-solid fa-users"></i></a>
+    <a class="btn btn-info" href="/Home/Tracks">Tracks <i class="fa-solid fa-headphones"></i></a>
+    <a class="btn btn-info" href="/Home/Genres">Genres <i class="fa-solid fa-guitar"></i></a>
+    <br />
+    <i class="fa-solid fa-hourglass-start" id="sideIcons"></i><p>Tired of waiting for the end of the year wrap to see your most lisented tracks, artists and genres? Then say hello to ForeverWrapped, the constant Spotify stat checker!</p>
+    <br />
+    <i class="fa-solid fa-arrow-up-wide-short" id="sideIcons"></i><p>View your most listened to artists, tracks and genres. Your data is fetched constanly utalizing the Spotify API endpoints each time you login.</p>
+    <br />
+    <i class="fa-solid fa-file-audio" id="sideIcons"></i><p>Save your top 50 songs you listen to on a playlist for later!</p>
 
-    @if (ViewBag.Artists != null)
-    {
-        <h2>Top Artists</h2>
-        <ul>
-            @foreach (var artist in ViewBag.Artists)
-            {
-                <li>
-                    @artist.Name <img src="@artist.FirstImageUrl" alt="Spotify Profile Image" />
-
-                    
-                </li>
-            }
-        </ul>
-    }
-    else
-    {
-        <p>No artists found.</p>
-    }
-    @if (ViewBag.Tracks != null)
-    {
-        <h2>Top Tracks</h2>
-        <ul>
-            @foreach (var song in ViewBag.Tracks)
-            {
-                <li>
-                    <img src="@song.Album.FirstImageUrl" alt="Spotify Profile Image" />
-                    <p>
-                        @song.Name FT. @song.Album.stringArtists
-                    </p>
-
-
-                </li>
-            }
-        </ul>
-    }
-    else
-    {
-        <p>No tracks found.</p>
-    }
 }
 else
 {
@@ -54,3 +26,6 @@ else
     //<a class="btn btn-primary" href="/signin-spotify">Login with Spotify</a>
     <a asp-action="SignIn">Click here to login</a>
 }
+
+<script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
+

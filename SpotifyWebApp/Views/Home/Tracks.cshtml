@@ -1,0 +1,33 @@
+﻿
+<style>
+    ul {
+        list-style-type: none; /* Removes bullet points from unordered lists */
+    }
+</style>
+<h1>@ViewData["Title"]</h1>
+
+    @if (ViewBag.Tracks != null)
+    {
+        <h2>Top Tracks</h2>
+        <ul>
+        @{
+            int counter = 1;
+        }
+            @foreach (var song in ViewBag.Tracks)
+            {
+                <li>
+                @counter <img src="@song.Album.FirstImageUrl" alt="Spotify Profile Image" /> @song.Name (@song.Album.stringArtists)
+                @{
+                    counter++;
+                }
+
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No tracks found.</p>
+    }
+
+
