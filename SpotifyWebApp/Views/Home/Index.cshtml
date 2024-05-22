@@ -3,21 +3,138 @@
 }
 <style>
     #sideIcons{
-        font-size: 5em;
+        font-size: 8em;
     }
+
+    .no-padding {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .full-width-btn {
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    .centered-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centers horizontally */
+        box-sizing: border-box; /* Include padding in height calculation */
+    }
+
+    .button-container {
+        width: 100%;
+        max-width: 400px; /* Adjust the max-width as needed */
+    }
+
+    .flex-container div {
+        margin: 5px; /* Add margin between flex items */
+        padding: 10px; /* Add padding to flex items */
+        /*border: 1px solid #ccc; /* Add border to flex items for visualization */
+    }
+    .center-bulletpoints{
+        display: inline;
+
+    }
+    .top-container-color{
+        border-radius: 25px;
+        background-color: #F5F5F5;
+    }
+    .bottom-container-color{
+        border-radius: 25px;
+        background-color: #FAFAFA;
+    }
+
+    .top-margins{
+        margin-top: 10px;
+    }
+
+
 </style>
 
 @if (User.Identity.IsAuthenticated)
 {
-    <a class="btn btn-info" href="/Home/Artists">Artists <i class="fa-solid fa-users"></i></a>
-    <a class="btn btn-info" href="/Home/Tracks">Tracks <i class="fa-solid fa-headphones"></i></a>
-    <a class="btn btn-info" href="/Home/Genres">Genres <i class="fa-solid fa-guitar"></i></a>
-    <br />
-    <i class="fa-solid fa-hourglass-start" id="sideIcons"></i><p>Tired of waiting for the end of the year wrap to see your most lisented tracks, artists and genres? Then say hello to ForeverWrapped, the constant Spotify stat checker!</p>
-    <br />
-    <i class="fa-solid fa-arrow-up-wide-short" id="sideIcons"></i><p>View your most listened to artists, tracks and genres. Your data is fetched constanly utalizing the Spotify API endpoints each time you login.</p>
-    <br />
-    <i class="fa-solid fa-file-audio" id="sideIcons"></i><p>Save your top 50 songs you listen to on a playlist for later!</p>
+    
+    <div class="container">
+        <div class="row flex-container top-container-color">
+            <div class="centered-content">
+                <h1>Forever Wrapped</h1>
+                <h6>Your yearly spotify analytics all year round!</h6>
+                <div class="button-container">
+                    <div class="row no-padding">
+                        <div class="col-12 no-padding">
+                            <a class="btn btn-info full-width-btn" href="/Home/Artists">Artists <i class="fa-solid fa-users"></i></a>
+                        </div>
+                    </div>
+                    <div class="row no-padding">
+                        <div class="col-12 no-padding">
+                            <a class="btn btn-info full-width-btn" href="/Home/Tracks">Tracks <i class="fa-solid fa-headphones"></i></a>
+                        </div>
+                    </div>
+                    <div class="row no-padding">
+                        <div class="col-12 no-padding">
+                            <a class="btn btn-info full-width-btn" href="/Home/Genres">Genres <i class="fa-solid fa-guitar"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row flex-container bottom-container-color">
+            <div class="centered-content">
+                <div class="row d-flex justify-content-center align-items-center">
+                    <div class="col-3 text-center">
+                        <i class="fa-solid fa-hourglass-start" id="sideIcons"></i>
+                    </div>
+                    <div class="col-6">
+                        <div class="row align-items-center">
+                            <div class="col-12">
+                                <h5>Here All Year!</h5>
+                            </div>
+                            <div class="col-12">
+                                <p>Tired of waiting for the end of the year wrap to see your most listened tracks, artists, and genres? Then say hello to ForeverWrapped, the constant Spotify stat checker!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row d-flex justify-content-center align-items-center">
+                    <div class="col-3 text-center">
+                        <i class="fa-solid fa-arrow-up-wide-short" id="sideIcons"></i>
+                    </div>
+                    <div class="col-6">
+                        <div class="row align-items-center">
+                            <div class="col-12">
+                                <h5>Your Top Charts</h5>
+                            </div>
+                            <div class="col-12">
+                                <p>View your most listened to artists, tracks and genres. Your data is fetched constanly utalizing the Spotify API endpoints each time you login.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row d-flex justify-content-center align-items-center">
+                    <div class="col-3 text-center">
+                        <i class="fa-solid fa-file-audio" id="sideIcons"></i>
+                    </div>
+                    <div class="col-6">
+                        <div class="row align-items-center">
+                            <div class="col-12">
+                                <h5>Save Playlists</h5>
+                            </div>
+                            <div class="col-12">
+                                <p>Save your top 50 songs you listen to on a playlist for later! test tes tes tse set set s et t set es tes et et etet set te t t ets </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+      
+    </div>
+
+    
 
 }
 else
