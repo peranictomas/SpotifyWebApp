@@ -129,6 +129,10 @@ public class HomeController : Controller
 
         var artistEndpoint = "https://api.spotify.com/v1/me/top/artists?limit=50";
 
+        var artistShortTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=50";
+        var artistMediumTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=50";
+        var artistLongTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=long_term&limit=50";
+
         var artistTask = client.GetAsync(artistEndpoint);
 
         await Task.WhenAll(artistTask);
