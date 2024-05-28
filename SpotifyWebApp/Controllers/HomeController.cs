@@ -119,6 +119,33 @@ public class HomeController : Controller
         return View();
     }
 
+    private object GetDataBasedOnTimeFrame(string timeFrame)
+    {
+        
+        if (timeFrame == "4weeks")
+        {
+            return new { message = "Data for 4 weeks" };
+        }
+        else if (timeFrame == "6months")
+        {
+            return new { message = "Data for 6 months" };
+        }
+        else if (timeFrame == "1year")
+        {
+            return new { message = "Data for 1 year" };
+        }
+        else
+        {
+            return new { message = "Invalid time frame" };
+        }
+    }
+
+    [HttpGet]
+    public JsonResult GetArtistsData(string timeFrame)
+    {
+        var data = GetDataBasedOnTimeFrame(timeFrame);
+        return Json(data);
+    }
 
     public async Task<IActionResult> Artists()
     {

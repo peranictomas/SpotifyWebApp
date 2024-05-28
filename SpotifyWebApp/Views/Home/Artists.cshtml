@@ -48,23 +48,23 @@
 
             <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true">Last 4 Weeks</button>
+                    <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getArtistsData('4weeks')">Last 4 Weeks</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="sixmonth-tab" data-bs-toggle="tab" data-bs-target="#sixmonth" type="button" role="tab" aria-controls="sixmonth" aria-selected="false">Last 6 Months</button>
+                    <button class="nav-link" id="sixmonth-tab" data-bs-toggle="tab" data-bs-target="#sixmonth" type="button" role="tab" aria-controls="sixmonth" aria-selected="false" onclick="getArtistsData('6months')">Last 6 Months</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="year-tab" data-bs-toggle="tab" data-bs-target="#year" type="button" role="tab" aria-controls="year" aria-selected="false">One Year</button>
+                    <button class="nav-link" id="year-tab" data-bs-toggle="tab" data-bs-target="#year" type="button" role="tab" aria-controls="year" aria-selected="false" onclick="getArtistsData('1year')">One Year</button>
                 </li>
             </ul>
            
             
             <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">week 4</div>
-                <div class="tab-pane fade" id="sixmonth" role="tabpanel" aria-labelledby="sixmonth-tab">6 months</div>
-                <div class="tab-pane fade" id="year" role="tabpanel" aria-labelledby="year-tab">1 year homie</div>
+                <div class="tab-pane fade show active" id="artistsDataContainer-4weeks" role="tabpanel" aria-labelledby="fourweeks-tab">week 4</div>
+                <div class="tab-pane fade" id="artistsDataContainer-6months" role="tabpanel" aria-labelledby="sixmonth-tab">6 months</div>
+                <div class="tab-pane fade" id="artistsDataContainer-1year" role="tabpanel" aria-labelledby="year-tab">1 year homie</div>
             </div>
-            
+
             <div class="row list-group-horizontal-wrap">
                 @{
                     int counter = 1;
@@ -91,6 +91,31 @@
 
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
+
+    <script>
+        function getArtistsData(timeFrame) {
+            $.ajax({
+                url: '/Home/GetArtistsData',
+                method: 'GET',
+                data: { timeFrame: timeFrame },
+                success: function (response) {
+                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    console.log(containerId)
+                    // Clear content of all containers
+                    $('#artistsDataContainer-4weeks').html('');
+                    $('#artistsDataContainer-6months').html('');
+                    $('#artistsDataContainer-1year').html('');
+                    // Update only the relevant container
+                    $(containerId).html(response.message);
+                },
+                error: function () {
+                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    $(containerId).html('An error occurred while fetching data.');
+                }
+            });
+        }
+
+    </script>
 
 </body>
 </html>
