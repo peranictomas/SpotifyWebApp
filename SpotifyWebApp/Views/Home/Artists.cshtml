@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horizontal List Group</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
     <style>
         ul {
             list-style-type: none; /* Removes bullet points from unordered lists */
@@ -45,24 +44,29 @@
     {
         <div class="container">
             <h2 class="text-center main-title">Top Artists</h2>
-
+  
             <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getArtistsData('4weeks')">Last 4 Weeks</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="sixmonth-tab" data-bs-toggle="tab" data-bs-target="#sixmonth" type="button" role="tab" aria-controls="sixmonth" aria-selected="false" onclick="getArtistsData('6months')">Last 6 Months</button>
+                    <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getArtistsData('6months')">Last 6 Months</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="year-tab" data-bs-toggle="tab" data-bs-target="#year" type="button" role="tab" aria-controls="year" aria-selected="false" onclick="getArtistsData('1year')">One Year</button>
+                    <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getArtistsData('1year')">Last 1 Year</button>
                 </li>
             </ul>
-           
-            
+
             <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade show active" id="artistsDataContainer-4weeks" role="tabpanel" aria-labelledby="fourweeks-tab">week 4</div>
-                <div class="tab-pane fade" id="artistsDataContainer-6months" role="tabpanel" aria-labelledby="sixmonth-tab">6 months</div>
-                <div class="tab-pane fade" id="artistsDataContainer-1year" role="tabpanel" aria-labelledby="year-tab">1 year homie</div>
+                <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
+                    <div id="artistsDataContainer-4weeks"></div>
+                </div>
+                <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
+                    <div id="artistsDataContainer-6months"></div>
+                </div>
+                <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
+                    <div id="artistsDataContainer-1year"></div>
+                </div>
             </div>
 
             <div class="row list-group-horizontal-wrap">
@@ -88,32 +92,37 @@
     {
         <p>No artists found.</p>
     }
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 
     <script>
         function getArtistsData(timeFrame) {
+            console.log("Fetching data for time frame:", timeFrame); // Log the time frame being requested
             $.ajax({
                 url: '/Home/GetArtistsData',
                 method: 'GET',
                 data: { timeFrame: timeFrame },
                 success: function (response) {
+                    console.log("Response received:", response); // Log the response from the server
                     var containerId = '#artistsDataContainer-' + timeFrame;
-                    console.log(containerId)
-                    // Clear content of all containers
-                    $('#artistsDataContainer-4weeks').html('');
-                    $('#artistsDataContainer-6months').html('');
-                    $('#artistsDataContainer-1year').html('');
+                    console.log("Updating container:", containerId);
                     // Update only the relevant container
                     $(containerId).html(response.message);
                 },
-                error: function () {
+                error: function (xhr, status, error) {
+                    console.error("Error occurred:", status, error); // Log any errors
                     var containerId = '#artistsDataContainer-' + timeFrame;
                     $(containerId).html('An error occurred while fetching data.');
                 }
             });
         }
+
+        // Automatically load data for the initially active tab
+        $(document).ready(function () {
+            console.log("Document is ready. Fetching data for the default tab (4weeks).");
+            getArtistsData('4weeks');
+        });
 
     </script>
 

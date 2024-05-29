@@ -17,6 +17,49 @@ public class HomeController : Controller
         _httpContextAccessor = httpContextAccessor;
     }
 
+    private async Task<string> RefreshAccessTokenAsync(string refreshToken)
+    {
+        using (var client = new HttpClient())
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "refresh_token", refreshToken },
+                { "client_id", "your_client_id" },
+                { "client_secret", "your_client_secret" }
+            };
+
+            var content = new FormUrlEncodedContent(parameters);
+            var response = await client.PostAsync("https://your-authorization-server.com/oauth/token", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseString);
+                HttpContext.Session.SetString("AccessToken", tokenResponse.AccessToken);
+                HttpContext.Session.SetString("RefreshToken", tokenResponse.RefreshToken);
+                HttpContext.Session.SetString("AccessTokenExpiresAt", DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString());
+
+                return tokenResponse.AccessToken;
+            }
+            else
+            {
+                throw new Exception("Could not refresh the access token.");
+            }
+        }
+    }
+
+    private bool IsAccessTokenExpired()
+    {
+        var expiresAt = HttpContext.Session.GetString("AccessTokenExpiresAt");
+        if (string.IsNullOrEmpty(expiresAt))
+        {
+            return true;
+        }
+
+        return DateTime.UtcNow >= DateTime.Parse(expiresAt);
+    }
+
     public async Task<IActionResult> Profile()
     {
         var accessToken = await HttpContext.GetTokenAsync("access_token");
@@ -119,36 +162,144 @@ public class HomeController : Controller
         return View();
     }
 
-    private object GetDataBasedOnTimeFrame(string timeFrame)
+    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeFrame)
     {
+        /*
+        var accessToken = await HttpContext.GetTokenAsync("access_token");
+
         
-        if (timeFrame == "4weeks")
+        */
+
+        timeFrame = "4weeks";
+
+        string accessToken = HttpContext.Session.GetString("AccessToken");
+        string refreshToken = HttpContext.Session.GetString("RefreshToken");
+
+        if (IsAccessTokenExpired())
         {
-            return new { message = "Data for 4 weeks" };
+            accessToken = await RefreshAccessTokenAsync(refreshToken);
         }
-        else if (timeFrame == "6months")
+
+        var client = _httpClientFactory.CreateClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        switch (timeFrame)
         {
-            return new { message = "Data for 6 months" };
+            case "4weeks":
+                var artistShortTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=50";
+                var artistResponseShort = await client.GetAsync(artistShortTermEndpoint);
+
+                if (artistResponseShort.IsSuccessStatusCode)
+                {
+                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+                    var contentArtist = await artistResponseShort.Content.ReadAsStringAsync();
+                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
+
+                    if (spotifyArtist != null)
+                    {
+                        foreach (var artist in spotifyArtist.Items)
+                        {
+                            if (artist.Image != null && artist.Image.Count > 0)
+                            {
+                                // Get the last image from the list and assign it back to the Image property
+                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
+                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Handle the case when spotifyArtists is null
+                    }
+
+                    ViewBag.Artists = spotifyArtist.Items;
+
+
+                }
+                return new { message = "Data for 4 weeks" };
+            case "6months":
+                var artistMediumTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=50";
+
+                var artistResponseMedium = await client.GetAsync(artistMediumTermEndpoint);
+
+                if (artistResponseMedium.IsSuccessStatusCode)
+                {
+                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+                    var contentArtist = await artistResponseMedium.Content.ReadAsStringAsync();
+                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
+
+                    if (spotifyArtist != null)
+                    {
+                        foreach (var artist in spotifyArtist.Items)
+                        {
+                            if (artist.Image != null && artist.Image.Count > 0)
+                            {
+                                // Get the last image from the list and assign it back to the Image property
+                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
+                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Handle the case when spotifyArtists is null
+                    }
+
+                    ViewBag.Artists = spotifyArtist.Items;
+
+
+                }
+                return new { message = "Data for 6 months" };
+            case "1year":
+                var artistLongTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=long_term&limit=50";
+                var artistResponseLong = await client.GetAsync(artistLongTermEndpoint);
+
+                if (artistResponseLong.IsSuccessStatusCode)
+                {
+                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+                    var contentArtist = await artistResponseLong.Content.ReadAsStringAsync();
+                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
+
+                    if (spotifyArtist != null)
+                    {
+                        foreach (var artist in spotifyArtist.Items)
+                        {
+                            if (artist.Image != null && artist.Image.Count > 0)
+                            {
+                                // Get the last image from the list and assign it back to the Image property
+                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
+                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Handle the case when spotifyArtists is null
+                    }
+
+                    ViewBag.Artists = spotifyArtist.Items;
+
+
+                }
+                return new { message = "Data for 1 year" };
+            default:
+                return new { message = "Invalid time frame" };
         }
-        else if (timeFrame == "1year")
-        {
-            return new { message = "Data for 1 year" };
-        }
-        else
-        {
-            return new { message = "Invalid time frame" };
-        }
+       
+
     }
 
     [HttpGet]
     public JsonResult GetArtistsData(string timeFrame)
     {
-        var data = GetDataBasedOnTimeFrame(timeFrame);
+        var data = GetDataBasedOnTimeFrameAsync(timeFrame);
         return Json(data);
     }
 
     public async Task<IActionResult> Artists()
     {
+        /*
         var accessToken = await HttpContext.GetTokenAsync("access_token");
 
         var client = _httpClientFactory.CreateClient();
@@ -193,6 +344,7 @@ public class HomeController : Controller
 
 
         }
+        */
         return View();
     }
 
