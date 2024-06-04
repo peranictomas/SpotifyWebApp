@@ -13,35 +13,35 @@
             height: 192px;
             width: 192px;
         }
-
+        
         .list-group-horizontal-wrap {
             display: flex;
             flex-wrap: wrap;
         }
-
+       
         .list-group-horizontal-wrap .list-group-item {
             margin-right: 10px; /* Add some space between items if needed */
             margin-bottom: 10px; /* Add some space at the bottom for wrapping */
             border: none; /* Remove border */
-            color: inherit; /* Ensure the color is inherited */
-            text-decoration: none; /* Remove underline */
+`            text-decoration: none; /* Remove underline */
         }
+        
+        
+       
 
-        .list-group-horizontal-wrap .list-group-item:hover {
-            color: inherit; /* Keep the color the same on hover */
-            text-decoration: none; /* Ensure no underline on hover */
-        }
         .main-title{
             margin-bottom: 50px;
             margin-top: 20px;
         }
 
+       
+
+
+          
+
     </style>
 </head>
 <body>
-
-    @if (ViewBag.Artists != null)
-    {
         <div class="container">
             <h2 class="text-center main-title">Top Artists</h2>
   
@@ -59,44 +59,53 @@
 
             <div class="tab-content" id="myTabContent">
                 <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
-                    <div id="artistsDataContainer-4weeks"></div>
+                    <div class="row list-group-horizontal-wrap" id="artistsDataContainer-4weeks"></div>
                 </div>
                 <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
-                    <div id="artistsDataContainer-6months"></div>
+                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-6months"></div>
                 </div>
                 <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
-                    <div id="artistsDataContainer-1year"></div>
+                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-1year"></div>
                 </div>
             </div>
 
-            <div class="row list-group-horizontal-wrap">
-                @{
-                    int counter = 1;
-                }
-                @foreach (var artist in ViewBag.Artists)
-                {
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a class="list-group-item text-center">
-                            <img src="@artist.FirstImageUrl" alt="Spotify Profile Image" />
-                            <div>@counter. @artist.Name <i class="fa-brands fa-spotify"></i></div>
-                            @{
-                                counter++;
-                            }
-                        </a>
-                    </div>
-                }
-            </div>
         </div>
-    }
-    else
-    {
-        <p>No artists found.</p>
-    }
+    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 
     <script>
+        function getArtistsData(timeFrame) {
+            console.log("Fetching data for time frame:", timeFrame); // Log the time frame being requested
+            $.ajax({
+                url:'/Home/GetArtistsData',
+                method: 'GET',
+                data: {timeFrame: timeFrame},
+                success: function (response) {
+                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    var artistHtml = '';
+                    if (response.artists){
+                        $.each(response.artists, function (index, artist) {
+                            artistHtml += `<div class="col-md-3 col-sm-6 mb-3">
+                            <a class="list-group-item text-center" href="${artist.uri}" target="_blank">
+                        <img src="${artist.firstImageUrl}" alt="Spotify Profile Image" />
+                        <div>${index + 1}. ${artist.name} <i class="fa-brands fa-spotify"></i></div>
+                    </a>
+                </div>`;
+                        });
+                    }
+                    $(containerId).html(artistHtml);
+
+                },
+                error: function(status, error){
+                    console.error("Error occurred:", status, error); // Log any errors
+                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    $(containerId).html('An error occurred while fetching data.');
+                }
+            });
+        }
+        /*
         function getArtistsData(timeFrame) {
             console.log("Fetching data for time frame:", timeFrame); // Log the time frame being requested
             $.ajax({
@@ -109,6 +118,25 @@
                     console.log("Updating container:", containerId);
                     // Update only the relevant container
                     $(containerId).html(response.message);
+                    if (response.artists) {
+                        // Create HTML content for artists
+                        //console.log("THIS IS THE RESPONSE",response.artists);
+                        var artistHtml = response.artists.map(function (artist, index) {
+                            return `
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a class="list-group-item text-center">
+                                        <img src="${artist.FirstImageUrl}" alt="Spotify Profile Image" />
+                                        <div>${index + 1}. ${artist.Name} <i class="fa-brands fa-spotify"></i></div>
+                                    </a>
+                                </div>`;
+                        }).join('');
+                        $(containerId).html(artistHtml);
+                    } else {
+                        $(containerId).html('No artists found.');
+                    }
+                    
+                    $(containerId).html(response.message);
+
                 },
                 error: function (xhr, status, error) {
                     console.error("Error occurred:", status, error); // Log any errors
@@ -117,13 +145,14 @@
                 }
             });
         }
-
+        */
         // Automatically load data for the initially active tab
+        
         $(document).ready(function () {
             console.log("Document is ready. Fetching data for the default tab (4weeks).");
             getArtistsData('4weeks');
         });
-
+        
     </script>
 
 </body>

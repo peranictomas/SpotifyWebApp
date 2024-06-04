@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,10 +35,29 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.MapJsonKey("urn:spotify:email", "email");
     options.Events = new OAuthEvents
     {
-        OnCreatingTicket = context =>
+        OnCreatingTicket = async context =>
         {
             // Access refresh token here: context.RefreshToken
-            return System.Threading.Tasks.Task.CompletedTask;
+            var accessToken = context.AccessToken;
+            var refreshToken = context.RefreshToken;
+            var expiresIn = context.ExpiresIn?.TotalSeconds;
+
+            var claims = new List<Claim>
+        {
+            new Claim("access_token", accessToken),
+            new Claim("refresh_token", refreshToken),
+            new Claim("expires_at", DateTime.UtcNow.AddSeconds(expiresIn.Value).ToString())
+        };
+
+            context.Identity.AddClaims(claims);
+
+            // Log for debugging purposes
+            Console.WriteLine($"Access Token: {accessToken}");
+            Console.WriteLine($"Refresh Token: {refreshToken}");
+            Console.WriteLine($"Expires At: {DateTime.UtcNow.AddSeconds(expiresIn.Value)}");
+
+            await Task.CompletedTask;
+            //return System.Threading.Tasks.Task.CompletedTask;
         }
     };
 });
@@ -45,6 +65,16 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
+
+
+
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 var app = builder.Build();
 
@@ -62,6 +92,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

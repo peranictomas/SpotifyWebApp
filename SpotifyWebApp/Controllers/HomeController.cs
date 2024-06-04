@@ -1,63 +1,55 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using SpotifyAPI.Web;
 using SpotifyWebApp.Models;
 using System.Net.Http.Headers;
 
 public class HomeController : Controller
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public HomeController(IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor)
+    public HomeController(IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory = httpClientFactory;
-        _httpContextAccessor = httpContextAccessor;
     }
 
-    private async Task<string> RefreshAccessTokenAsync(string refreshToken)
+    [Authorize]
+    public async Task<IActionResult> Index()
     {
-        using (var client = new HttpClient())
+        var accessToken = await EnsureValidAccessTokenAsync();
+
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var profileEndpoint = "https://api.spotify.com/v1/me";
+
+        var profileResponse = await client.GetAsync(profileEndpoint);
+
+        if (profileResponse.IsSuccessStatusCode)
         {
-            var parameters = new Dictionary<string, string>
+            var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+            var contentProfile = await profileResponse.Content.ReadAsStringAsync();
+            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(contentProfile, settings);
+
+            var userProfile = new SpotifyUserProfile
             {
-                { "grant_type", "refresh_token" },
-                { "refresh_token", refreshToken },
-                { "client_id", "your_client_id" },
-                { "client_secret", "your_client_secret" }
+                Email = spotifyUser.Email,
+                DisplayName = spotifyUser.DisplayName,
+                UserProfileImage = spotifyUser.Images.FirstOrDefault()?.Url,
+                ID = spotifyUser.ID,
+                Country = spotifyUser?.Country,
+                AccountType = spotifyUser.AccountType,
+                Followers = spotifyUser.Followers.Total
             };
-
-            var content = new FormUrlEncodedContent(parameters);
-            var response = await client.PostAsync("https://your-authorization-server.com/oauth/token", content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseString);
-                HttpContext.Session.SetString("AccessToken", tokenResponse.AccessToken);
-                HttpContext.Session.SetString("RefreshToken", tokenResponse.RefreshToken);
-                HttpContext.Session.SetString("AccessTokenExpiresAt", DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString());
-
-                return tokenResponse.AccessToken;
-            }
-            else
-            {
-                throw new Exception("Could not refresh the access token.");
-            }
+            return View(userProfile);
         }
-    }
-
-    private bool IsAccessTokenExpired()
-    {
-        var expiresAt = HttpContext.Session.GetString("AccessTokenExpiresAt");
-        if (string.IsNullOrEmpty(expiresAt))
+        else
         {
-            return true;
+            return View("Error");
         }
 
-        return DateTime.UtcNow >= DateTime.Parse(expiresAt);
     }
 
     public async Task<IActionResult> Profile()
@@ -90,6 +82,19 @@ public class HomeController : Controller
             ViewBag.Followers = spotifyUser.Followers.Total;
 
         }
+        return View();
+    }
+
+    public async Task<IActionResult> Logout()
+    {
+        // Clear the session
+        HttpContext.Session.Clear();
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return View(); // Redirect to home or another page after logout
+    }
+
+    public async Task<IActionResult> Artists()
+    {
         return View();
     }
 
@@ -162,23 +167,84 @@ public class HomeController : Controller
         return View();
     }
 
+    public async Task<IActionResult> Genres()
+    {
+        return View();
+    }
+
+
+    private async Task<string> EnsureValidAccessTokenAsync()
+    {
+        var accessToken = await HttpContext.GetTokenAsync("access_token");
+        var refreshToken = await HttpContext.GetTokenAsync("refresh_token");
+        var expiresAt = await HttpContext.GetTokenAsync("expires_at");
+
+        if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(expiresAt))
+        {
+            throw new Exception("Tokens are missing in the session.");
+        }
+
+        if (DateTime.TryParse(expiresAt, out var expiryTime) && DateTime.UtcNow >= expiryTime)
+        {
+            // Token has expired, refresh it
+
+            using (var client = _httpClientFactory.CreateClient())
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "grant_type", "refresh_token" },
+                    { "refresh_token", refreshToken },
+                    { "client_id", "9d8836eff00a4ac49132fd687fa862a7" },
+                    { "client_secret", "0da6a9e4992a417ca8e9f81d77708cbe" }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+                var response = await client.PostAsync("https://accounts.spotify.com/api/token", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseString = await response.Content.ReadAsStringAsync();
+                    var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseString);
+                    // Log the new tokens
+
+
+                    // Use the existing refresh token if it's not included in the response
+                    var newAccessToken = tokenResponse.AccessToken;
+                    var newRefreshToken = tokenResponse.RefreshToken ?? refreshToken;
+                    var newExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString();
+
+
+                    // Save the new tokens
+                    var authInfo = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    authInfo.Properties.UpdateTokenValue("access_token", newAccessToken);
+                    authInfo.Properties.UpdateTokenValue("refresh_token", newRefreshToken);
+                    //authInfo.Properties.UpdateTokenValue("expires_at", DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString());
+                    authInfo.Properties.UpdateTokenValue("expires_at", newExpiresAt);
+
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, authInfo.Principal, authInfo.Properties);
+
+                    return tokenResponse.AccessToken;
+                }
+                else
+                {
+                    throw new Exception("Could not refresh access token.");
+                }
+            }
+        }
+
+        return accessToken;
+    }
+
+    [HttpGet]
+    public async Task<JsonResult> GetArtistsData(string timeFrame)
+    {
+        var data = await GetDataBasedOnTimeFrameAsync(timeFrame);
+        return Json(data);
+    }
+
     private async Task<object> GetDataBasedOnTimeFrameAsync(string timeFrame)
     {
-        /*
-        var accessToken = await HttpContext.GetTokenAsync("access_token");
-
-        
-        */
-
-        timeFrame = "4weeks";
-
-        string accessToken = HttpContext.Session.GetString("AccessToken");
-        string refreshToken = HttpContext.Session.GetString("RefreshToken");
-
-        if (IsAccessTokenExpired())
-        {
-            accessToken = await RefreshAccessTokenAsync(refreshToken);
-        }
+        var accessToken = await EnsureValidAccessTokenAsync();
 
         var client = _httpClientFactory.CreateClient();
 
@@ -207,17 +273,20 @@ public class HomeController : Controller
                                 artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
                             }
                         }
+                        ViewBag.Artists = spotifyArtist.Items;
+                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
+
                     }
                     else
                     {
+                        ViewBag.Artists = spotifyArtist.Items;
                         // Handle the case when spotifyArtists is null
+                        return new { message = "No Artists Found" };
+
                     }
 
-                    ViewBag.Artists = spotifyArtist.Items;
-
-
                 }
-                return new { message = "Data for 4 weeks" };
+                return new { message = "Data for 4 weeks"};
             case "6months":
                 var artistMediumTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=50";
 
@@ -240,10 +309,14 @@ public class HomeController : Controller
                                 artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
                             }
                         }
+                        ViewBag.Artists = spotifyArtist.Items;
+                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
                     }
                     else
                     {
+                        ViewBag.Artists = spotifyArtist.Items;
                         // Handle the case when spotifyArtists is null
+                        return new { message = "No Artists Found" };
                     }
 
                     ViewBag.Artists = spotifyArtist.Items;
@@ -272,10 +345,14 @@ public class HomeController : Controller
                                 artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
                             }
                         }
+                        ViewBag.Artists = spotifyArtist.Items;
+                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
                     }
                     else
                     {
+                        ViewBag.Artists = spotifyArtist.Items;
                         // Handle the case when spotifyArtists is null
+                        return new { message = "No Artists Found" };
                     }
 
                     ViewBag.Artists = spotifyArtist.Items;
@@ -290,182 +367,6 @@ public class HomeController : Controller
 
     }
 
-    [HttpGet]
-    public JsonResult GetArtistsData(string timeFrame)
-    {
-        var data = GetDataBasedOnTimeFrameAsync(timeFrame);
-        return Json(data);
-    }
 
-    public async Task<IActionResult> Artists()
-    {
-        /*
-        var accessToken = await HttpContext.GetTokenAsync("access_token");
-
-        var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var artistEndpoint = "https://api.spotify.com/v1/me/top/artists?limit=50";
-
-        var artistShortTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=50";
-        var artistMediumTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=50";
-        var artistLongTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=long_term&limit=50";
-
-        var artistTask = client.GetAsync(artistEndpoint);
-
-        await Task.WhenAll(artistTask);
-
-        var artistResponse = await artistTask;
-
-        if (artistResponse.IsSuccessStatusCode)
-        {
-            var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-            var contentArtist = await artistResponse.Content.ReadAsStringAsync();
-            var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
-
-            if (spotifyArtist != null)
-            {
-                foreach (var artist in spotifyArtist.Items)
-                {
-                    if (artist.Image != null && artist.Image.Count > 0)
-                    {
-                        // Get the last image from the list and assign it back to the Image property
-                        artist.Image = new List<SpotifyImage> { artist.Image.Last() };
-                        artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
-                    }
-                }
-            }
-            else
-            {
-                // Handle the case when spotifyArtists is null
-            }
-
-            ViewBag.Artists = spotifyArtist.Items;
-
-
-        }
-        */
-        return View();
-    }
-
-    [Authorize]
-    public async Task<IActionResult> Index()
-    {
-        var accessToken = await HttpContext.GetTokenAsync("access_token");
-
-        var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var profileEndpoint = "https://api.spotify.com/v1/me";
-        var artistEndpoint = "https://api.spotify.com/v1/me/top/artists?limit=50";
-        var trackEndpoints = "https://api.spotify.com/v1/me/top/tracks?limit=50";
-
-        var profileTask = client.GetAsync(profileEndpoint);
-        var artistTask = client.GetAsync(artistEndpoint);
-        var trackTask = client.GetAsync(trackEndpoints);
-
-        await Task.WhenAll(profileTask, artistTask, trackTask);
-
-        var profileResponse = await profileTask;
-        var artistResponse = await artistTask;
-        var trackResponse = await trackTask;
-
-        if (profileResponse.IsSuccessStatusCode && artistResponse.IsSuccessStatusCode && trackResponse.IsSuccessStatusCode)
-        {
-            var settings = new JsonSerializerSettings{ NullValueHandling = NullValueHandling.Ignore};
-            var contentProfile = await profileResponse.Content.ReadAsStringAsync();
-            var contentArtist =  await artistResponse.Content.ReadAsStringAsync();
-            var contentTrack = await trackResponse.Content.ReadAsStringAsync();
-            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(contentProfile, settings);
-            var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
-            var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(contentTrack, settings);
-
-
-            if (spotifyArtist != null)
-            {
-                foreach (var artist in spotifyArtist.Items)
-                {
-                    if (artist.Image != null && artist.Image.Count > 0)
-                    {
-                        // Get the last image from the list and assign it back to the Image property
-                        artist.Image = new List<SpotifyImage> { artist.Image.Last() };
-                        artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
-                    }
-                }
-            }
-            else
-            {
-                // Handle the case when spotifyArtists is null
-            }
-
-            if (spotifyTrack != null)
-            {
-                foreach (var track in spotifyTrack.Items)
-                {
-                    var songFeatures = "";
-                    var totalCount = track.Album.Artists.Count;
-                    var currentIndex = 0;
-                    foreach (var artist in track.Album.Artists)
-                    {
-                        if(currentIndex == 0)
-                        {
-                            songFeatures += artist.Name;
-                        }
-                        if(currentIndex > 0 && currentIndex != totalCount - 1)
-                        {
-                            songFeatures += ", " + artist.Name;
-                        }
-                        if (currentIndex == totalCount - 1)
-                        {
-                            songFeatures += ", " + artist.Name + ".";
-                        }
-                        currentIndex++;
-                    }
-                    if (track.Album != null && track.Album.Image.Count > 0)
-                    {
-                        //Get the last image from the list and assign it back to the Image property
-                        
-                        //track.Album = new List<SpotifyImage> { track.Album.Image.Last() };
-                        track.Album.FirstImageUrl = track.Album.Image.LastOrDefault()?.Url;
-                        track.Album.stringArtists = songFeatures;
-
-                    }
-                   
-                }
-            }
-            else
-            {
-                // Handle the case when spotifyArtists is null
-            }
-
-
-
-            ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
-            ViewBag.DisplayName = spotifyUser.DisplayName;
-            ViewBag.SpotifyUserProfileImage = spotifyUser.Images.FirstOrDefault()?.Url;
-            ViewBag.ID = spotifyUser.ID;
-            ViewBag.Country = spotifyUser?.Country;
-            ViewBag.AccountType = spotifyUser.AccountType;
-            ViewBag.Followers = spotifyUser.Followers.Total;
-
-            ViewBag.Artists = spotifyArtist.Items;
-
-            ViewBag.Tracks = spotifyTrack.Items;
-            
-
-
-
-        }
-
-        return View();
-    }
-    public async Task<IActionResult> Genres()
-    {
-        return View(); 
-    }
-    public async Task<IActionResult> Logout()
-    {
-        await HttpContext.SignOutAsync("Cookies");
-        return RedirectToAction("Index"); // Redirect to home or another page after logout
-    }
+  
 }

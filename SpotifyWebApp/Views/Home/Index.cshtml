@@ -1,6 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
+@model SpotifyUserProfile
 <style>
     #sideIcons{
         font-size: 8em;
@@ -53,7 +54,7 @@
 
 </style>
 
-@if (User.Identity.IsAuthenticated)
+@if (!string.IsNullOrEmpty(Model.Email))
 {
     
     <div class="container">
