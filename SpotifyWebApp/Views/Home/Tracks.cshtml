@@ -1,33 +1,107 @@
-﻿
-<style>
-    ul {
-        list-style-type: none; /* Removes bullet points from unordered lists */
-    }
-</style>
-<h1>@ViewData["Title"]</h1>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Page</title>
 
-    @if (ViewBag.Tracks != null)
-    {
-        <h2>Top Tracks</h2>
-        <ul>
-        @{
-            int counter = 1;
+    <style>
+        ul {
+            list-style-type: none; /* Removes bullet points from unordered lists */
         }
-            @foreach (var song in ViewBag.Tracks)
-            {
-                <li>
-                @counter <img src="@song.Album.FirstImageUrl" alt="Spotify Profile Image" /> @song.Name (@song.Album.stringArtists)
-                @{
-                    counter++;
-                }
 
-                </li>
-            }
+        img {
+            height: 192px;
+            width: 192px;
+        }
+
+        .list-group-horizontal-wrap {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .list-group-horizontal-wrap .list-group-item {
+            margin-right: 10px; /* Add some space between items if needed */
+            margin-bottom: 10px; /* Add some space at the bottom for wrapping */
+            border: none; /* Remove border */
+            text-decoration: none; /* Remove underline */
+        }
+
+        .main-title {
+            margin-bottom: 50px;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center main-title">Top Tracks</h2>
+
+        <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getTrackData('4weeksTrack')">Last 4 Weeks</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getTrackData('6monthsTrack')">Last 6 Months</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getTrackData('1yearTrack')">Last 1 Year</button>
+            </li>
         </ul>
-    }
-    else
-    {
-        <p>No tracks found.</p>
-    }
 
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-4weeksTrack"></div>
+            </div>
+            <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-6monthsTrack"></div>
+            </div>
+            <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-1yearTrack"></div>
+            </div>
+        </div>
 
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
+
+    <script>
+        function getTrackData(timeFrame) {
+            $.ajax({
+                url: '/Home/GetArtistTrackData',
+                method: 'GET',
+                data: { timeFrame: timeFrame },
+                success: function (response) {
+                    var containerId = '#tracksDataContainer-' + timeFrame;
+                    var artistHtml = '';
+                    if (response.tracks) {
+                        $.each(response.tracks, function (index, track) {
+                            artistHtml += `<div class="col-md-3 col-sm-6 mb-3">
+                                    <a class="list-group-item text-center" href="${track.album.uri}" target="_blank">
+                                <img src="${track.album.firstImageUrl}" alt="Spotify Profile Image" />
+                                <div>${index + 1}. ${track.name} <i class="fa-brands fa-spotify"></i></div>
+                            </a>
+                        </div>`;
+                        });
+                    }
+                    $(containerId).html(artistHtml);
+
+                },
+                error: function (status, error) {
+                    var containerId = '#tracksDataContainer-' + timeFrame;
+                    $(containerId).html('An error occurred while fetching data.');
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            getTrackData('4weeksTrack');
+        });
+
+    </script>
+
+</body>
+</html>

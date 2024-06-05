@@ -10,7 +10,8 @@ namespace SpotifyWebApp.Models
         public string FirstImageUrl { get; set; }
         [JsonProperty("artists")]
         public List<SpotifyArtist> Artists { get; set; }
-
+        [JsonProperty("uri")]
+        public string Uri { get; set; }
         public string stringArtists { get; set; }
 
     }

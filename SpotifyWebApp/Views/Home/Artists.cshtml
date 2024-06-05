@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horizontal List Group</title>
+    <title>Artist Page</title>
     <style>
         ul {
             list-style-type: none; /* Removes bullet points from unordered lists */
@@ -23,7 +23,7 @@
             margin-right: 10px; /* Add some space between items if needed */
             margin-bottom: 10px; /* Add some space at the bottom for wrapping */
             border: none; /* Remove border */
-`            text-decoration: none; /* Remove underline */
+            text-decoration: none; /* Remove underline */
         }
         
         
@@ -33,11 +33,6 @@
             margin-bottom: 50px;
             margin-top: 20px;
         }
-
-       
-
-
-          
 
     </style>
 </head>
@@ -77,9 +72,8 @@
 
     <script>
         function getArtistsData(timeFrame) {
-            console.log("Fetching data for time frame:", timeFrame); // Log the time frame being requested
             $.ajax({
-                url:'/Home/GetArtistsData',
+                url: '/Home/GetArtistTrackData',
                 method: 'GET',
                 data: {timeFrame: timeFrame},
                 success: function (response) {
@@ -99,54 +93,11 @@
 
                 },
                 error: function(status, error){
-                    console.error("Error occurred:", status, error); // Log any errors
                     var containerId = '#artistsDataContainer-' + timeFrame;
                     $(containerId).html('An error occurred while fetching data.');
                 }
             });
         }
-        /*
-        function getArtistsData(timeFrame) {
-            console.log("Fetching data for time frame:", timeFrame); // Log the time frame being requested
-            $.ajax({
-                url: '/Home/GetArtistsData',
-                method: 'GET',
-                data: { timeFrame: timeFrame },
-                success: function (response) {
-                    console.log("Response received:", response); // Log the response from the server
-                    var containerId = '#artistsDataContainer-' + timeFrame;
-                    console.log("Updating container:", containerId);
-                    // Update only the relevant container
-                    $(containerId).html(response.message);
-                    if (response.artists) {
-                        // Create HTML content for artists
-                        //console.log("THIS IS THE RESPONSE",response.artists);
-                        var artistHtml = response.artists.map(function (artist, index) {
-                            return `
-                                <div class="col-md-3 col-sm-6 mb-3">
-                                    <a class="list-group-item text-center">
-                                        <img src="${artist.FirstImageUrl}" alt="Spotify Profile Image" />
-                                        <div>${index + 1}. ${artist.Name} <i class="fa-brands fa-spotify"></i></div>
-                                    </a>
-                                </div>`;
-                        }).join('');
-                        $(containerId).html(artistHtml);
-                    } else {
-                        $(containerId).html('No artists found.');
-                    }
-                    
-                    $(containerId).html(response.message);
-
-                },
-                error: function (xhr, status, error) {
-                    console.error("Error occurred:", status, error); // Log any errors
-                    var containerId = '#artistsDataContainer-' + timeFrame;
-                    $(containerId).html('An error occurred while fetching data.');
-                }
-            });
-        }
-        */
-        // Automatically load data for the initially active tab
         
         $(document).ready(function () {
             console.log("Document is ready. Fetching data for the default tab (4weeks).");
