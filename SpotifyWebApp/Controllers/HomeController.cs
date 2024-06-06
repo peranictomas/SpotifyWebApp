@@ -379,7 +379,7 @@ public class HomeController : Controller
                             if (track.Album != null && track.Album.Image.Count > 0)
                             {
                                 //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.LastOrDefault()?.Url;
+                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
                                 track.Album.stringArtists = songFeatures;
                                 track.Album.Uri = track.Album.Uri;
                             }
@@ -430,7 +430,7 @@ public class HomeController : Controller
                             if (track.Album != null && track.Album.Image.Count > 0)
                             {
                                 //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.LastOrDefault()?.Url;
+                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
                                 track.Album.stringArtists = songFeatures;
                                 track.Album.Uri = track.Album.Uri;
                             }
@@ -480,7 +480,7 @@ public class HomeController : Controller
                             if (track.Album != null && track.Album.Image.Count > 0)
                             {
                                 //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.LastOrDefault()?.Url;
+                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
                                 track.Album.stringArtists = songFeatures;
                                 track.Album.Uri = track.Album.Uri;
                             }
