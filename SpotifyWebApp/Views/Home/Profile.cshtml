@@ -1,22 +1,124 @@
-﻿@{
-    ViewData["Title"] = "Profile";
-}
-<h1>@ViewData["Title"]</h1>
+﻿<style>
+    #sideIcons {
+        font-size: 4em;
+    }
 
-@if (User.Identity.IsAuthenticated)
-{
-    <h2>Hello, @ViewBag.DisplayName</h2>
-    <p>Email: @ViewBag.Email</p>
-    <p>ID: @ViewBag.ID</p>
-    <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
-    <p>Country: @ViewBag.Country</p>
-    <p>Account Type: @ViewBag.AccountType</p>
-    <p>Number of Followers: @ViewBag.Followers</p>
-}
-else
-{
-    <p>You are not authenticated with Spotify. Please sign in.</p>
-    //<a class="btn btn-primary" href="/signin-spotify">Login with Spotify</a>
-    <a asp-action="SignIn">Click here to login</a>
-}
+    .no-padding {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .centered-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centers horizontally */
+        box-sizing: border-box; /* Include padding in height calculation */
+    }
+
+    .top-container-color {
+        border-radius: 25px;
+        background-color: #F5F5F5;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .bottom-container-color {
+        border-radius: 25px;
+        background-color: #FAFAFA;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .top-margins {
+        margin-top: 10px;
+    }
+
+    img {
+        height: 250px;
+        width: 250px;
+        border-radius: 35%;
+    }
+
+    .icon-text-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 15px;
+    }
+
+    .icon {
+        flex: 0 0 70px; /* Fixed width for the icon column */
+        text-align: center;
+    }
+
+    .text {
+        flex: 0 0 350px; /* Fixed width for the text column based on the longest description */
+        text-align: left;
+        margin-left: 30px;
+    }
+
+    .profile-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h5 {
+        margin: 0;
+    }
+</style>
+
+<div class="container">
+    <div class="row top-container-color">
+        <div class="centered-content">
+            <h1>Profile</h1>
+            <h6>Welcome, @ViewBag.DisplayName</h6>
+            <div class="button-container">
+                <div class="row no-padding">
+                    <div class="col-12 no-padding">
+                        <img src="@ViewBag.SpotifyUserProfileImage" alt="Spotify Profile Image" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row bottom-container-color">
+        <div class="centered-content profile-section">
+            <div class="icon-text-row">
+                <div class="icon">
+                    <i class="fa-solid fa-signature" id="sideIcons"></i>
+                </div>
+                <div class="text">
+                    <h5>Username: @ViewBag.ID</h5>
+                </div>
+            </div>
+            <div class="icon-text-row">
+                <div class="icon">
+                    <i class="fa-solid fa-users" id="sideIcons"></i>
+                </div>
+                <div class="text">
+                    <h5>Followers: @ViewBag.Followers</h5>
+                </div>
+            </div>
+            <div class="icon-text-row">
+                <div class="icon">
+                    <i class="fa-solid fa-user-gear" id="sideIcons"></i>
+                </div>
+                <div class="text">
+                    <h5>Account: @ViewBag.AccountType</h5>
+                </div>
+            </div>
+            <div class="icon-text-row">
+                <div class="icon">
+                    <i class="fa-solid fa-inbox" id="sideIcons"></i>
+                </div>
+                <div class="text">
+                    <h5>Email: @ViewBag.Email</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 

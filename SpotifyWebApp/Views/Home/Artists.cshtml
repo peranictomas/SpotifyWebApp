@@ -42,25 +42,25 @@
   
             <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getArtistsData('4weeks')">Last 4 Weeks</button>
+                    <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getArtistsData('short_term')">Last 4 Weeks</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getArtistsData('6months')">Last 6 Months</button>
+                    <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getArtistsData('medium_term')">Last 6 Months</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getArtistsData('1year')">Last 1 Year</button>
+                    <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getArtistsData('long_term')">Last 1 Year</button>
                 </li>
             </ul>
 
             <div class="tab-content" id="myTabContent">
                 <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
-                    <div class="row list-group-horizontal-wrap" id="artistsDataContainer-4weeks"></div>
+                    <div class="row list-group-horizontal-wrap" id="artistsDataContainer-short_term"></div>
                 </div>
                 <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
-                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-6months"></div>
+                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-medium_term"></div>
                 </div>
                 <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
-                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-1year"></div>
+                <div class="row list-group-horizontal-wrap" id="artistsDataContainer-long_term"></div>
                 </div>
             </div>
 
@@ -71,13 +71,13 @@
     <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 
     <script>
-        function getArtistsData(timeFrame) {
+        function getArtistsData(timeRange) {
             $.ajax({
                 url: '/Home/GetArtistTrackData',
                 method: 'GET',
-                data: {timeFrame: timeFrame},
+                data: {timeRange: timeRange, type: "artists"},
                 success: function (response) {
-                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    var containerId = '#artistsDataContainer-' + timeRange;
                     var artistHtml = '';
                     if (response.artists){
                         $.each(response.artists, function (index, artist) {
@@ -93,7 +93,7 @@
 
                 },
                 error: function(status, error){
-                    var containerId = '#artistsDataContainer-' + timeFrame;
+                    var containerId = '#artistsDataContainer-' + timeRange;
                     $(containerId).html('An error occurred while fetching data.');
                 }
             });
@@ -101,7 +101,7 @@
         
         $(document).ready(function () {
             console.log("Document is ready. Fetching data for the default tab (4weeks).");
-            getArtistsData('4weeks');
+            getArtistsData('short_term');
         });
         
     </script>

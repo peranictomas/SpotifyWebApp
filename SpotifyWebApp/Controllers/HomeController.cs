@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using SpotifyAPI.Web;
 using SpotifyWebApp.Models;
 using System.Net.Http.Headers;
 
@@ -19,37 +20,14 @@ public class HomeController : Controller
     public async Task<IActionResult> Index()
     {
         var accessToken = await EnsureValidAccessTokenAsync();
-
-        var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var profileEndpoint = "https://api.spotify.com/v1/me";
-
-        var profileResponse = await client.GetAsync(profileEndpoint);
-
-        if (profileResponse.IsSuccessStatusCode)
+        if (string.IsNullOrEmpty(accessToken))
         {
-            var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-            var contentProfile = await profileResponse.Content.ReadAsStringAsync();
-            var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(contentProfile, settings);
-
-            var userProfile = new SpotifyUserProfile
-            {
-                Email = spotifyUser.Email,
-                DisplayName = spotifyUser.DisplayName,
-                UserProfileImage = spotifyUser.Images.FirstOrDefault()?.Url,
-                ID = spotifyUser.ID,
-                Country = spotifyUser?.Country,
-                AccountType = spotifyUser.AccountType,
-                Followers = spotifyUser.Followers.Total
-            };
-            return View(userProfile);
+            return RedirectToAction("Logout");
         }
         else
         {
-            return View("Error");
+            return View();
         }
-
     }
 
     public async Task<IActionResult> Profile()
@@ -75,7 +53,7 @@ public class HomeController : Controller
 
             ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
             ViewBag.DisplayName = spotifyUser.DisplayName;
-            ViewBag.SpotifyUserProfileImage = spotifyUser.Images.FirstOrDefault()?.Url;
+            ViewBag.SpotifyUserProfileImage = spotifyUser.Images.LastOrDefault()?.Url;
             ViewBag.ID = spotifyUser.ID;
             ViewBag.Country = spotifyUser?.Country;
             ViewBag.AccountType = spotifyUser.AccountType;
@@ -90,86 +68,22 @@ public class HomeController : Controller
         // Clear the session
         HttpContext.Session.Clear();
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return View(); // Redirect to home or another page after logout
+        return View(); 
     }
 
-    public async Task<IActionResult> Artists()
+    public Task<IActionResult> Artists()
     {
-        return View();
+        return Task.FromResult<IActionResult>(View());
     }
 
-    public async Task<IActionResult> Tracks()
+    public Task<IActionResult> Tracks()
     {
-        var accessToken = await HttpContext.GetTokenAsync("access_token");
-
-        var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var trackEndpoints = "https://api.spotify.com/v1/me/top/tracks?limit=50";
-
-        var trackTask = client.GetAsync(trackEndpoints);
-
-        await Task.WhenAll(trackTask);
-
-        var trackResponse = await trackTask;
-        if (trackResponse.IsSuccessStatusCode)
-        {
-            var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-            var contentTrack = await trackResponse.Content.ReadAsStringAsync();
-            var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(contentTrack, settings);
-
-
-            if (spotifyTrack != null)
-            {
-                foreach (var track in spotifyTrack.Items)
-                {
-                    var songFeatures = "";
-                    var totalCount = track.Album.Artists.Count;
-                    var currentIndex = 0;
-                    foreach (var artist in track.Album.Artists)
-                    {
-                        if (currentIndex == 0)
-                        {
-                            songFeatures += artist.Name;
-                        }
-                        if (currentIndex > 0 && currentIndex != totalCount - 1)
-                        {
-                            songFeatures += ", " + artist.Name;
-                        }
-                        if (currentIndex == totalCount - 1)
-                        {
-                            songFeatures += ", " + artist.Name + ".";
-                        }
-                        currentIndex++;
-                    }
-                    if (track.Album != null && track.Album.Image.Count > 0)
-                    {
-                        //Get the last image from the list and assign it back to the Image property
-
-                        //track.Album = new List<SpotifyImage> { track.Album.Image.Last() };
-                        track.Album.FirstImageUrl = track.Album.Image.LastOrDefault()?.Url;
-                        track.Album.stringArtists = songFeatures;
-
-                    }
-
-                }
-            }
-            else
-            {
-                // Handle the case when spotifyArtists is null
-            }
-
-            ViewBag.Tracks = spotifyTrack.Items;
-
-
-        }
-
-        return View();
+        return Task.FromResult<IActionResult>(View());
     }
 
-    public async Task<IActionResult> Genres()
+    public Task<IActionResult> Genres()
     {
-        return View();
+        return Task.FromResult<IActionResult>(View());
     }
 
 
@@ -236,272 +150,78 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public async Task<JsonResult> GetArtistTrackData(string timeFrame)
+    public async Task<JsonResult> GetArtistTrackData(string timeRange, string type)
     {
-        var data = await GetDataBasedOnTimeFrameAsync(timeFrame);
+        //timeRange : short_term medium_term long_term
+        //type : artists tracks
+        var data = await GetDataBasedOnTimeFrameAsync(timeRange, type);
         return Json(data);
     }
 
-    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeFrame)
+    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeRange, string type)
     {
         var accessToken = await EnsureValidAccessTokenAsync();
-
         var client = _httpClientFactory.CreateClient();
-
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        switch (timeFrame)
+        var endPoint = $"https://api.spotify.com/v1/me/top/{type}?time_range={timeRange}&limit=50";
+        var endPointResponse = await client.GetAsync(endPoint);
+
+        var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+        if (!endPointResponse.IsSuccessStatusCode)
         {
-            case "4weeks":
-                var artistShortTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=50";
-                var artistResponseShort = await client.GetAsync(artistShortTermEndpoint);
-
-                if (artistResponseShort.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentArtist = await artistResponseShort.Content.ReadAsStringAsync();
-                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
-
-                    if (spotifyArtist != null)
-                    {
-                        foreach (var artist in spotifyArtist.Items)
-                        {
-                            if (artist.Image != null && artist.Image.Count > 0)
-                            {
-                                // Get the last image from the list and assign it back to the Image property
-                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
-                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
-
-                    }
-                    else
-                    {
-                        return new { message = "No Artists Found" };
-
-                    }
-
-                }
-                return new { message = "Data for 4 weeks"};
-            case "6months":
-                var artistMediumTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=medium_term&limit=50";
-                var artistResponseMedium = await client.GetAsync(artistMediumTermEndpoint);
-
-                if (artistResponseMedium.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentArtist = await artistResponseMedium.Content.ReadAsStringAsync();
-                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
-
-                    if (spotifyArtist != null)
-                    {
-                        foreach (var artist in spotifyArtist.Items)
-                        {
-                            if (artist.Image != null && artist.Image.Count > 0)
-                            {
-                                // Get the last image from the list and assign it back to the Image property
-                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
-                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
-                    }
-                    else
-                    {
-                        return new { message = "No Artists Found" };
-                    }
-
-                }
-                return new { message = "Data for 6 months" };
-            case "1year":
-                var artistLongTermEndpoint = "https://api.spotify.com/v1/me/top/artists?time_range=long_term&limit=50";
-                var artistResponseLong = await client.GetAsync(artistLongTermEndpoint);
-
-                if (artistResponseLong.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentArtist = await artistResponseLong.Content.ReadAsStringAsync();
-                    var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(contentArtist, settings);
-
-                    if (spotifyArtist != null)
-                    {
-                        foreach (var artist in spotifyArtist.Items)
-                        {
-                            if (artist.Image != null && artist.Image.Count > 0)
-                            {
-                                // Get the last image from the list and assign it back to the Image property
-                                artist.Image = new List<SpotifyImage> { artist.Image.Last() };
-                                artist.FirstImageUrl = artist.Image.FirstOrDefault()?.Url;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", artists = spotifyArtist.Items };
-                    }
-                    else
-                    {
-                        return new { message = "No Artists Found" };
-                    }
-                }
-                return new { message = "Data for 1 year" };
-            case "4weeksTrack":
-                var trackEndpoints = "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=50";
-                var trackResponse = await client.GetAsync(trackEndpoints);
-
-                if (trackResponse.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentTrack = await trackResponse.Content.ReadAsStringAsync();
-                    var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(contentTrack, settings);
-
-                    if (spotifyTrack != null)
-                    {
-                        foreach (var track in spotifyTrack.Items)
-                        {
-                            var songFeatures = "";
-                            var totalCount = track.Album.Artists.Count;
-                            var currentIndex = 0;
-                            foreach (var artist in track.Album.Artists)
-                            {
-                                if (currentIndex == 0)
-                                {
-                                    songFeatures += artist.Name;
-                                }
-                                if (currentIndex > 0 && currentIndex != totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name;
-                                }
-                                if (currentIndex == totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name + ".";
-                                }
-                                currentIndex++;
-                            }
-                            if (track.Album != null && track.Album.Image.Count > 0)
-                            {
-                                //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
-                                track.Album.stringArtists = songFeatures;
-                                track.Album.Uri = track.Album.Uri;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", tracks = spotifyTrack.Items };
-                    }
-                    else
-                    {
-                        return new { message = "No Tracks Found" };
-
-                    }
-                }
-                return new { message = "Data for 4 weeks track" };
-
-            case "6monthsTrack":
-                var trackEndpointsMedium = "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=50";
-                var trackResponseMedium = await client.GetAsync(trackEndpointsMedium);
-
-                if (trackResponseMedium.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentTrack = await trackResponseMedium.Content.ReadAsStringAsync();
-                    var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(contentTrack, settings);
-
-                    if (spotifyTrack != null)
-                    {
-                        foreach (var track in spotifyTrack.Items)
-                        {
-                            var songFeatures = "";
-                            var totalCount = track.Album.Artists.Count;
-                            var currentIndex = 0;
-                            foreach (var artist in track.Album.Artists)
-                            {
-                                if (currentIndex == 0)
-                                {
-                                    songFeatures += artist.Name;
-                                }
-                                if (currentIndex > 0 && currentIndex != totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name;
-                                }
-                                if (currentIndex == totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name + ".";
-                                }
-                                currentIndex++;
-                            }
-                            if (track.Album != null && track.Album.Image.Count > 0)
-                            {
-                                //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
-                                track.Album.stringArtists = songFeatures;
-                                track.Album.Uri = track.Album.Uri;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", tracks = spotifyTrack.Items };
-                    }
-                    else
-                    {
-                        return new { message = "No Tracks Found" };
-
-                    }
-                }
-                return new { message = "Data for 6 months track" };
-            case "1yearTrack":
-                var trackEndpointsLong = "https://api.spotify.com/v1/me/top/tracks?time_range=long_term&limit=50";
-                var trackResponseLong = await client.GetAsync(trackEndpointsLong);
-
-                if (trackResponseLong.IsSuccessStatusCode)
-                {
-                    var settings = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
-                    var contentTrack = await trackResponseLong.Content.ReadAsStringAsync();
-                    var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(contentTrack, settings);
-
-                    if (spotifyTrack != null)
-                    {
-                        foreach (var track in spotifyTrack.Items)
-                        {
-                            var songFeatures = "";
-                            var totalCount = track.Album.Artists.Count;
-                            var currentIndex = 0;
-                            foreach (var artist in track.Album.Artists)
-                            {
-                                if (currentIndex == 0)
-                                {
-                                    songFeatures += artist.Name;
-                                }
-                                if (currentIndex > 0 && currentIndex != totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name;
-                                }
-                                if (currentIndex == totalCount - 1)
-                                {
-                                    songFeatures += ", " + artist.Name + ".";
-                                }
-                                currentIndex++;
-                            }
-                            if (track.Album != null && track.Album.Image.Count > 0)
-                            {
-                                //Get the last image from the list and assign it back to the Image property
-                                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
-                                track.Album.stringArtists = songFeatures;
-                                track.Album.Uri = track.Album.Uri;
-                            }
-                        }
-                        return new { message = "Data retrieved successfully", tracks = spotifyTrack.Items };
-                    }
-                    else
-                    {
-                        return new { message = "No Tracks Found" };
-
-                    }
-                }
-                return new { message = "Data for 1 year track" };
-
-            default:
-                return new { message = "Invalid time frame" };
+            return new { message = "Failed to retrieve data from Spotify API." };
         }
-       
 
+        var content = await endPointResponse.Content.ReadAsStringAsync();
+        return type switch
+        {
+            "artists" => await ProcessArtistsResponseAsync(content, settings),
+            "tracks" => await ProcessTracksResponseAsync(content, settings),
+            _ => new { message = "Invalid time frame or type." }
+        };
     }
 
+    private Task<object> ProcessArtistsResponseAsync(string content, JsonSerializerSettings settings)
+    {
+        var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(content, settings);
+        if (spotifyArtist == null)
+        {
+            return Task.FromResult<object>(new { message = "No Artists Found" });
+        }
 
-  
+        foreach (var artist in spotifyArtist.Items)
+        {
+            if (artist.Image?.Count > 0)
+            {
+                artist.FirstImageUrl = artist.Image.Last()?.Url;
+            }
+        }
+
+        return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = spotifyArtist.Items });
+    }
+
+    private Task<object> ProcessTracksResponseAsync(string content, JsonSerializerSettings settings)
+    {
+        var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(content, settings);
+        if (spotifyTrack == null)
+        {
+            return Task.FromResult<object>(new { message = "No Tracks Found" });
+        }
+
+        foreach (var track in spotifyTrack.Items)
+        {
+            var songFeatures = string.Join(", ", track.Album.Artists.Select((artist, index) =>
+                index == track.Album.Artists.Count - 1 ? $"{artist.Name}." : artist.Name));
+
+            if (track.Album?.Image.Count > 0)
+            {
+                track.Album.FirstImageUrl = track.Album.Image.FirstOrDefault()?.Url;
+                track.Album.stringArtists = songFeatures;
+            }
+        }
+
+        return Task.FromResult<object>(new { message = "Data retrieved successfully", tracks = spotifyTrack.Items });
+    }
+
 }

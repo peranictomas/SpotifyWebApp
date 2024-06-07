@@ -40,25 +40,25 @@
 
         <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getTrackData('4weeksTrack')">Last 4 Weeks</button>
+                <button class="nav-link active" id="fourweeks-tab" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getTrackData('short_term')">Last 4 Weeks</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getTrackData('6monthsTrack')">Last 6 Months</button>
+                <button class="nav-link" id="sixmonths-tab" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getTrackData('medium_term')">Last 6 Months</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getTrackData('1yearTrack')">Last 1 Year</button>
+                <button class="nav-link" id="oneyear-tab" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getTrackData('long_term')">Last 1 Year</button>
             </li>
         </ul>
 
         <div class="tab-content" id="myTabContent">
             <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-4weeksTrack"></div>
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-short_term"></div>
             </div>
             <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-6monthsTrack"></div>
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-medium_term"></div>
             </div>
             <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-1yearTrack"></div>
+                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-long_term"></div>
             </div>
         </div>
 
@@ -69,17 +69,17 @@
     <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 
     <script>
-        function getTrackData(timeFrame) {
+        function getTrackData(timeRange) {
             $.ajax({
                 url: '/Home/GetArtistTrackData',
                 method: 'GET',
-                data: { timeFrame: timeFrame },
+                data: { timeRange: timeRange, type: "tracks" },
                 success: function (response) {
-                    var containerId = '#tracksDataContainer-' + timeFrame;
-                    var artistHtml = '';
+                    var containerId = '#tracksDataContainer-' + timeRange;
+                    var trackHtml = '';
                     if (response.tracks) {
                         $.each(response.tracks, function (index, track) {
-                            artistHtml += `<div class="col-md-3 col-sm-6 mb-3">
+                            trackHtml += `<div class="col-md-3 col-sm-6 mb-3">
                                     <a class="list-group-item text-center" href="${track.album.uri}" target="_blank">
                                 <img src="${track.album.firstImageUrl}" alt="Spotify Profile Image" />
                                 <div>${index + 1}. ${track.name} <i class="fa-brands fa-spotify"></i></div>
@@ -87,18 +87,18 @@
                         </div>`;
                         });
                     }
-                    $(containerId).html(artistHtml);
+                    $(containerId).html(trackHtml);
 
                 },
                 error: function (status, error) {
-                    var containerId = '#tracksDataContainer-' + timeFrame;
+                    var containerId = '#tracksDataContainer-' + timeRange;
                     $(containerId).html('An error occurred while fetching data.');
                 }
             });
         }
 
         $(document).ready(function () {
-            getTrackData('4weeksTrack');
+            getTrackData('short_term');
         });
 
     </script>

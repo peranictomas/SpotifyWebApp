@@ -53,10 +53,6 @@
 
 
 </style>
-
-@if (!string.IsNullOrEmpty(Model.Email))
-{
-    
     <div class="container">
         <div class="row flex-container top-container-color">
             <div class="centered-content">
@@ -135,15 +131,6 @@
       
     </div>
 
-    
-
-}
-else
-{
-    <p>You are not authenticated with Spotify. Please sign in.</p>
-    //<a class="btn btn-primary" href="/signin-spotify">Login with Spotify</a>
-    <a asp-action="SignIn">Click here to login</a>
-}
 
 <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
 
