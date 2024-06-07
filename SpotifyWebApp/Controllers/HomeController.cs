@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using SpotifyAPI.Web;
 using SpotifyWebApp.Models;
 using System.Net.Http.Headers;
 
@@ -16,6 +15,7 @@ public class HomeController : Controller
         _httpClientFactory = httpClientFactory;
     }
 
+    //Checks whether the user is authenticated or not, if not dont display the homepage.
     [Authorize]
     public async Task<IActionResult> Index()
     {
@@ -30,20 +30,14 @@ public class HomeController : Controller
         }
     }
 
+    //Displays the users profile statistics
     public async Task<IActionResult> Profile()
     {
-        var accessToken = await HttpContext.GetTokenAsync("access_token");
+        var accessToken = await EnsureValidAccessTokenAsync();
 
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var profileEndpoint = "https://api.spotify.com/v1/me";
-
-        var profileTask = client.GetAsync(profileEndpoint);
-
-        await Task.WhenAll(profileTask);
-
-        var profileResponse = await profileTask;
+        var profileResponse = await client.GetAsync("https://api.spotify.com/v1/me");
 
         if (profileResponse.IsSuccessStatusCode)
         {
@@ -51,7 +45,8 @@ public class HomeController : Controller
             var contentProfile = await profileResponse.Content.ReadAsStringAsync();
             var spotifyUser = JsonConvert.DeserializeObject<SpotifyUser>(contentProfile, settings);
 
-            ViewBag.Email = spotifyUser.Email; // Store the email in ViewBag for use in the view
+            // Store the variables in ViewBags for use in the view
+            ViewBag.Email = spotifyUser.Email; 
             ViewBag.DisplayName = spotifyUser.DisplayName;
             ViewBag.SpotifyUserProfileImage = spotifyUser.Images.LastOrDefault()?.Url;
             ViewBag.ID = spotifyUser.ID;
@@ -61,6 +56,11 @@ public class HomeController : Controller
 
         }
         return View();
+    }
+
+    public Task<IActionResult> Privacy()
+    {
+        return Task.FromResult<IActionResult>(View());
     }
 
     public async Task<IActionResult> Logout()
@@ -86,7 +86,10 @@ public class HomeController : Controller
         return Task.FromResult<IActionResult>(View());
     }
 
-
+    //This method will check if the users access token is still valid.
+    //This is achieved through the use of the refresh token as well as checking
+    //What time the token will expire at. If expired method will update the users access token,
+    //refresh token, and the new expiry date.
     private async Task<string> EnsureValidAccessTokenAsync()
     {
         var accessToken = await HttpContext.GetTokenAsync("access_token");
@@ -101,7 +104,6 @@ public class HomeController : Controller
         if (DateTime.TryParse(expiresAt, out var expiryTime) && DateTime.UtcNow >= expiryTime)
         {
             // Token has expired, refresh it
-
             using (var client = _httpClientFactory.CreateClient())
             {
                 var parameters = new Dictionary<string, string>
@@ -119,20 +121,16 @@ public class HomeController : Controller
                 {
                     var responseString = await response.Content.ReadAsStringAsync();
                     var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseString);
-                    // Log the new tokens
 
-
+                    // Log the new tokens.
                     // Use the existing refresh token if it's not included in the response
                     var newAccessToken = tokenResponse.AccessToken;
                     var newRefreshToken = tokenResponse.RefreshToken ?? refreshToken;
                     var newExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString();
 
-
-                    // Save the new tokens
                     var authInfo = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                     authInfo.Properties.UpdateTokenValue("access_token", newAccessToken);
                     authInfo.Properties.UpdateTokenValue("refresh_token", newRefreshToken);
-                    //authInfo.Properties.UpdateTokenValue("expires_at", DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString());
                     authInfo.Properties.UpdateTokenValue("expires_at", newExpiresAt);
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, authInfo.Principal, authInfo.Properties);
@@ -149,15 +147,20 @@ public class HomeController : Controller
         return accessToken;
     }
 
+    //This method is used to update the tab views to the proper time period selected and for their respective views.
+    //timeRange : short_term, medium_term, long_term
+    //type : artists, tracks
     [HttpGet]
     public async Task<JsonResult> GetArtistTrackData(string timeRange, string type)
     {
-        //timeRange : short_term medium_term long_term
-        //type : artists tracks
         var data = await GetDataBasedOnTimeFrameAsync(timeRange, type);
         return Json(data);
     }
 
+    //The method will verify the access token and will call either artists or tracks methods in the return statement to get
+    //the desired information. It also creates the endpoint and sends the data contents to either method.
+    //timeRange : short_term, medium_term, long_term
+    //type : artists, tracks
     private async Task<object> GetDataBasedOnTimeFrameAsync(string timeRange, string type)
     {
         var accessToken = await EnsureValidAccessTokenAsync();
@@ -182,6 +185,9 @@ public class HomeController : Controller
         };
     }
 
+    //Converts the endpoint string information into my object for SpotifyTopArtists.
+    //settings: json serialized settings for the endpoint.
+    //content: api endpoint returned data in string format.
     private Task<object> ProcessArtistsResponseAsync(string content, JsonSerializerSettings settings)
     {
         var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(content, settings);
@@ -201,6 +207,9 @@ public class HomeController : Controller
         return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = spotifyArtist.Items });
     }
 
+    //Converts the endpoint string information into my object for SpotifyTopTracks.
+    //settings: json serialized settings for the endpoint.
+    //content: api endpoint returned data in string format.
     private Task<object> ProcessTracksResponseAsync(string content, JsonSerializerSettings settings)
     {
         var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(content, settings);
