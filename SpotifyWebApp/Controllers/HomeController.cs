@@ -151,9 +151,9 @@ public class HomeController : Controller
     //timeRange : short_term, medium_term, long_term
     //type : artists, tracks
     [HttpGet]
-    public async Task<JsonResult> GetArtistTrackData(string timeRange, string type)
+    public async Task<JsonResult> GetArtistTrackData(string timeRange, string type, bool genres = false, int genreAmount = 10)
     {
-        var data = await GetDataBasedOnTimeFrameAsync(timeRange, type);
+        var data = await GetDataBasedOnTimeFrameAsync(timeRange, type, genres, genreAmount);
         return Json(data);
     }
 
@@ -161,7 +161,7 @@ public class HomeController : Controller
     //the desired information. It also creates the endpoint and sends the data contents to either method.
     //timeRange : short_term, medium_term, long_term
     //type : artists, tracks
-    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeRange, string type)
+    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeRange, string type, bool genres, int genreAmount)
     {
         var accessToken = await EnsureValidAccessTokenAsync();
         var client = _httpClientFactory.CreateClient();
@@ -179,7 +179,7 @@ public class HomeController : Controller
         var content = await endPointResponse.Content.ReadAsStringAsync();
         return type switch
         {
-            "artists" => await ProcessArtistsResponseAsync(content, settings),
+            "artists" => await ProcessArtistsResponseAsync(content, settings, genres, genreAmount),
             "tracks" => await ProcessTracksResponseAsync(content, settings),
             _ => new { message = "Invalid time frame or type." }
         };
@@ -188,7 +188,7 @@ public class HomeController : Controller
     //Converts the endpoint string information into my object for SpotifyTopArtists.
     //settings: json serialized settings for the endpoint.
     //content: api endpoint returned data in string format.
-    private Task<object> ProcessArtistsResponseAsync(string content, JsonSerializerSettings settings)
+    private Task<object> ProcessArtistsResponseAsync(string content, JsonSerializerSettings settings, bool genres, int genreAmount)
     {
         var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(content, settings);
         if (spotifyArtist == null)
@@ -196,12 +196,44 @@ public class HomeController : Controller
             return Task.FromResult<object>(new { message = "No Artists Found" });
         }
 
-        foreach (var artist in spotifyArtist.Items)
+        if(genres == false)
         {
-            if (artist.Image?.Count > 0)
+            foreach (var artist in spotifyArtist.Items)
             {
-                artist.FirstImageUrl = artist.Image.Last()?.Url;
+                if (artist.Image?.Count > 0)
+                {
+                    artist.FirstImageUrl = artist.Image.Last()?.Url;
+                }
             }
+        }
+        else
+        {
+            //    SpotifyGenres test = new SpotifyGenres();
+
+            //    foreach (var artist in spotifyArtist.Items)
+            //    {
+            //        foreach(var genre in artist.Genres)
+            //        {
+            //            if (!test.Genres.ContainsKey(genre))
+            //            {
+            //                test.Genres.Add(genre, 1);
+            //            }
+            //            else
+            //            {
+            //                test.Genres[genre] += 1;
+            //            }
+            //        }
+
+
+            //    }
+            //    return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = test.Genres.OrderByDescending(genre => genre.Value).Take(genreAmount)
+            //});
+            var genreCounts = spotifyArtist.Items
+           .SelectMany(artist => artist.Genres)
+           .GroupBy(genre => genre)
+           .ToDictionary(group => group.Key, group => group.Count());
+
+            return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = genreCounts.OrderByDescending(kv => kv.Value).Take(genreAmount) });
         }
 
         return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = spotifyArtist.Items });
@@ -232,5 +264,6 @@ public class HomeController : Controller
 
         return Task.FromResult<object>(new { message = "Data retrieved successfully", tracks = spotifyTrack.Items });
     }
+
 
 }

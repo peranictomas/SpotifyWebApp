@@ -1,5 +1,198 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
-}
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Page</title>
+
+    <style>
+      
+        .nav-tabs .nav-link {
+            background-color: #E0E0E0;
+            color: black;
+        }
+
+        .nav-item .nav-link.active {
+            background-color: #F5F5F5;
+        }
+
+        .main-title {
+            margin-bottom: 50px;
+            margin-top: 20px;
+        }
+
+        #myChartContainer {
+            background-color: #F5F5F5;
+            border-radius: 1%;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h2 class="text-center main-title">Top Genres</h2>
+        <h5 class="text-center main-title">Information is based on the users top 50 artists from the selected time frame. Select the maximum amount of top genres you would like to see!</h5>
+
+        <ul class="nav nav-tabs nav-fill w-100" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="short_term" data-bs-toggle="tab" data-bs-target="#fourweeks" type="button" role="tab" aria-controls="fourweeks" aria-selected="true" onclick="getTrackData('short_term')">Last 4 Weeks</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="medium_term" data-bs-toggle="tab" data-bs-target="#sixmonths" type="button" role="tab" aria-controls="sixmonths" aria-selected="false" onclick="getTrackData('medium_term')">Last 6 Months</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="long_term" data-bs-toggle="tab" data-bs-target="#oneyear" type="button" role="tab" aria-controls="oneyear" aria-selected="false" onclick="getTrackData('long_term')">Last 1 Year</button>
+            </li>
+        </ul>
+
+        <div>
+            <select multiple class="form-control" id="genreAmountPicker">
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+                <option>6</option>
+                <option>7</option>
+                <option>8</option>
+                <option>9</option>
+                <option selected>10</option>
+                <option>11</option>
+                <option>12</option>
+                <option>13</option>
+                <option>14</option>
+                <option>15</option>
+                <option>16</option>
+                <option>17</option>
+                <option>18</option>
+                <option>19</option>
+                <option>20</option>
+            </select>
+        </div>
+
+        <div id="myChartContainer" class="d-flex justify-content-center align-items-center">
+            <canvas id="myChart"></canvas>
+
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/b8bac57295.js" crossorigin="anonymous"></script>
+    <!--Script for https://www.chartjs.org/docs/latest/samples/other-charts/doughnut.html -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        //Global Variables
+        const graphLabels = [];
+        const graphValues = [];
+        var myChart;
+
+
+
+        $(document).ready(function () {
+            getTrackData('short_term');
+            adjustChartHeight(); 
+
+        });
+
+        // Function to adjust chart height
+        function adjustChartHeight() {
+            var windowHeight = $(window).height();
+            var chartHeight = windowHeight * 0.8; // Adjust as needed
+            $('#myChartContainer').height(chartHeight);
+        }
+
+        function getTrackData(timeRange, genreAmount = 10) {
+            $.ajax({
+                url: '/Home/GetArtistTrackData',
+                method: 'GET',
+                data: { timeRange: timeRange, type: "artists", genres: true, genreAmount: genreAmount },
+                success: function (response) {
+                    if (response.artists) {
+                        // Clear existing data
+                        graphLabels.length = 0;
+                        graphValues.length = 0;
+                        $.each(response.artists, function (key, value) {
+                            graphLabels.push(value.key);
+                            graphValues.push(value.value);
+                        });
+                    }
+
+                    // Destroy existing chart if it exists
+                    if (myChart) {
+                        myChart.destroy();
+                    }
+             
+                    // Generate random background colors for each dataset
+                    var backgroundColors = generateDistinctColors(graphValues.length);
+
+                    // Create chart
+                    var ctx = document.getElementById('myChart').getContext('2d');
+
+                    myChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: graphLabels,
+                            datasets: [{
+                                label: 'Data',
+                                data: graphValues,
+                                backgroundColor: backgroundColors,
+                                borderColor: backgroundColors,
+                                borderWidth: 1
+                            }]
+                        }
+                    });
+
+                },
+                error: function (status, error) {
+
+                }
+            });
+        }
+
+        // Function to generate random distinct HSL colors
+        //distinct and not similar, you can use the HSL (Hue, Saturation, Lightness)
+        function generateDistinctColors(count) {
+            var colors = [];
+            var hueStep = 360 / count;
+            for (var i = 0; i < count; i++) {
+                var hue = i * hueStep;
+                var saturation = 50 + Math.random() * 50; // Random saturation between 50% and 100%
+                var lightness = 50 + Math.random() * 10; // Random lightness between 50% and 60%
+                var color = 'hsl(' + hue + ',' + saturation + '%,' + lightness + '%)';
+                colors.push(color);
+            }
+            return colors;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var selectElement = document.getElementById('genreAmountPicker');
+            var options = selectElement.options;
+
+            for (var i = 0; i < options.length; i++) {
+                options[i].addEventListener('click', function () {
+                    // Get the active tab element
+                    const activeTab = document.querySelector('.nav-tabs .nav-link.active');
+
+                    // Get the ID of the active tab
+                    const activeTabId = activeTab.getAttribute('id');
+
+                    getTrackData(activeTabId, this.value);
+                });
+            }
+        });
+
+        // Event listener for window resize
+        $(window).resize(function () {
+            adjustChartHeight();
+        });
+
+
+    </script>
+
+</body>
+</html>
