@@ -30,6 +30,9 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
     options.Scope.Add("user-top-read");
+    options.Scope.Add("playlist-read-private");
+    options.Scope.Add("playlist-modify-private");
+    options.Scope.Add("playlist-modify-public");
     options.SaveTokens = true;
     options.ClaimActions.MapJsonKey("urn:spotify:displayname", "display_name");
     options.ClaimActions.MapJsonKey("urn:spotify:email", "email");
@@ -37,27 +40,20 @@ builder.Services.AddAuthentication(options =>
     {
         OnCreatingTicket = async context =>
         {
-            // Access refresh token here: context.RefreshToken
             var accessToken = context.AccessToken;
             var refreshToken = context.RefreshToken;
             var expiresIn = context.ExpiresIn?.TotalSeconds;
 
             var claims = new List<Claim>
-        {
-            new Claim("access_token", accessToken),
-            new Claim("refresh_token", refreshToken),
-            new Claim("expires_at", DateTime.UtcNow.AddSeconds(expiresIn.Value).ToString())
-        };
+            {
+                new Claim("access_token", accessToken),
+                new Claim("refresh_token", refreshToken),
+                new Claim("expires_at", DateTime.UtcNow.AddSeconds(expiresIn.Value).ToString())
+            };
 
             context.Identity.AddClaims(claims);
 
-            // Log for debugging purposes
-            Console.WriteLine($"Access Token: {accessToken}");
-            Console.WriteLine($"Refresh Token: {refreshToken}");
-            Console.WriteLine($"Expires At: {DateTime.UtcNow.AddSeconds(expiresIn.Value)}");
-
             await Task.CompletedTask;
-            //return System.Threading.Tasks.Task.CompletedTask;
         }
     };
 });
@@ -65,8 +61,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
-
-
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
