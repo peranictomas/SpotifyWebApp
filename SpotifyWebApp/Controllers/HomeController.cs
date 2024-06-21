@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using SpotifyWebApp.Models;
+using System.Linq.Expressions;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
@@ -374,6 +375,7 @@ public async Task<IActionResult> Profile()
 
     }
 
+    //check if playlist exists already
     private async Task<object> CreatePlaylist()
     {
         try
@@ -415,6 +417,55 @@ public async Task<IActionResult> Profile()
         {
             return new { message = "An error occurred: " + ex.Message };
         }
+    }
+
+    [HttpGet]
+    public async Task<object> GetUsersPlaylist()
+    {
+        try
+        {
+            var (spotifyUser, accessToken) = await GetSpotifyClient();
+            if (spotifyUser == null || accessToken == null)
+            {
+                return new { message = "Failed to retrieve Spotify client information" };
+            }
+
+            var userId = spotifyUser.ID;
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var response = await client.GetAsync($"https://api.spotify.com/v1/users/{userId}/playlists");
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+
+                var playlistUris = JsonConvert.DeserializeObject<SpotifyUsersPlaylists>(responseString);
+
+                var playlistForeverWrapped = playlistUris.Items.Where(p => p.Name.Equals("PlaylistForeverWrapped")).ToList();
+
+                var playlistID = playlistForeverWrapped.FirstOrDefault().Id;
+                //send over the id for the playlist to update and modify it.
+
+                return new { message = responseString };
+            }
+            else
+            {
+                return new { message = "Failed to create playlist. Error: " + responseString };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new { message = "An error occurred: " + ex.Message };
+        }
+
+
+    }
+
+    public async Task<object> SaveToPlaylist()
+    {
+
+        return new { message = "Playlist Saved" };
     }
 
 

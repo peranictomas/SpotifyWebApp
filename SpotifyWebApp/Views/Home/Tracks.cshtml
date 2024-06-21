@@ -78,6 +78,10 @@
             </div>
         </div>
 
+        <div class="text-center">
+            <a class="btn btn-info" onclick="getPlaylist()">Save Tracks To Playlist</a>
+        </div>
+
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -109,6 +113,28 @@
                 error: function (status, error) {
                     var containerId = '#tracksDataContainer-' + timeRange;
                     $(containerId).html('An error occurred while fetching data.');
+                }
+            });
+        }
+
+        function getPlaylist() {
+            console.log("clicked");
+            $.ajax({
+                url: '/Home/GetUsersPlaylist',
+                method: 'GET',
+                data: {  },
+                success: function (response) {
+                    console.log(response)
+                    if (response.tracks) {
+                        $.each(response.tracks, function (index, track) {
+                           
+                        });
+                    }
+                    
+
+                },
+                error: function (status, error) {
+
                 }
             });
         }
