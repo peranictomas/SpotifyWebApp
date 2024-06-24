@@ -68,18 +68,20 @@
 
         <div class="tab-content" id="myTabContent">
             <div class="tab-pane fade show active" id="fourweeks" role="tabpanel" aria-labelledby="fourweeks-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-short_term"></div>
+                <div class="row list-group-horizontal-wrap" id="short_term"></div>
             </div>
             <div class="tab-pane fade" id="sixmonths" role="tabpanel" aria-labelledby="sixmonths-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-medium_term"></div>
+                <div class="row list-group-horizontal-wrap" id="medium_term"></div>
             </div>
             <div class="tab-pane fade" id="oneyear" role="tabpanel" aria-labelledby="oneyear-tab">
-                <div class="row list-group-horizontal-wrap" id="tracksDataContainer-long_term"></div>
+                <div class="row list-group-horizontal-wrap" id="long_term"></div>
             </div>
         </div>
 
-        <div class="text-center">
-            <a class="btn btn-info" onclick="getPlaylist()">Save Tracks To Playlist</a>
+        <div id="buttonArea">
+            
+        </div>
+        <div id="messageHelp">
         </div>
 
     </div>
@@ -95,7 +97,7 @@
                 method: 'GET',
                 data: { timeRange: timeRange, type: "tracks" },
                 success: function (response) {
-                    var containerId = '#tracksDataContainer-' + timeRange;
+                    var containerId = '#' + timeRange;
                     var trackHtml = '';
                     if (response.tracks) {
                         $.each(response.tracks, function (index, track) {
@@ -108,6 +110,7 @@
                         });
                     }
                     $(containerId).html(trackHtml);
+                    $("#buttonArea").html('<div class="text-center"> <a class="btn btn-info" onclick = "getPlaylist()"> Save Tracks To Playlist </a> </div>');
 
                 },
                 error: function (status, error) {
@@ -117,21 +120,44 @@
             });
         }
 
-        function getPlaylist() {
-            console.log("clicked");
-            $.ajax({
-                url: '/Home/GetUsersPlaylist',
-                method: 'GET',
-                data: {  },
-                success: function (response) {
-                    console.log(response)
-                    if (response.tracks) {
-                        $.each(response.tracks, function (index, track) {
-                           
-                        });
-                    }
-                    
+        function showSaveSuccessMessage() {
+          
+        }
 
+        function getActiveTabContent() {
+            const myTabContent = document.getElementById('myTabContent');
+            const activeTab = myTabContent.querySelector('.tab-pane.show.active');
+            if (activeTab) {
+                const contentDiv = activeTab.querySelector('div.row.list-group-horizontal-wrap');
+                return contentDiv;
+            }
+            return null;
+        }
+
+        function getPlaylist() {
+
+            const activeTabContent = getActiveTabContent();
+            const timeRange = activeTabContent.id;            
+            $.ajax({
+                url: '/Home/VerifyPlaylistFunction',
+                method: 'GET',
+                data: {timeRange: timeRange  },
+                success: function (response) {
+                    // Add a div to indicate success
+                    var successMessageDiv = $('<div>').addClass('alert alert-success').text('Your playlist was successfully saved.');
+
+                    var innerHTML = `<div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16" role="img" aria-label="Success:">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+          </svg>
+          <div>
+            <strong>Your Playlist has been successfully saved. Please allow sometime in order for all devices to sync properly and show it :)
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        </div>`
+                    $('#messageHelp').empty().append(innerHTML);
+
+                    
                 },
                 error: function (status, error) {
 

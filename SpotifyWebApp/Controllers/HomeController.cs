@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using SpotifyWebApp.Models;
+using System;
 using System.Linq.Expressions;
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -31,7 +32,7 @@ public class HomeController : Controller
         }
 
         // Use the access token to call Spotify APIs
-        var userProfile = await GetSpotifyUserProfileAsync(accessToken);
+        var userProfile = await GetSpotifyUserProfile(accessToken);
 
         return View();
     }
@@ -78,10 +79,9 @@ public async Task<IActionResult> Profile()
         return View();
     }
 
-    public async Task<IActionResult> Privacy()
+    public Task<IActionResult> Privacy()
     {
-        await CreatePlaylist();
-        return View();
+        return Task.FromResult<IActionResult>(View());
     }
 
     public async Task<IActionResult> Logout()
@@ -107,6 +107,10 @@ public async Task<IActionResult> Profile()
         return Task.FromResult<IActionResult>(View());
     }
 
+    //This method will check if the users access token is still valid.
+    //This is achieved through the use of the refresh token as well as checking
+    //What time the token will expire at. If expired method will update the users access token,
+    //refresh token, and the new expiry date.
     private async Task<string> EnsureValidAccessTokenAsync()
     {
         var accessToken = await HttpContext.GetTokenAsync("access_token");
@@ -162,7 +166,7 @@ public async Task<IActionResult> Profile()
         return accessToken;
     }
 
-    private async Task<object> GetSpotifyUserProfileAsync(string accessToken)
+    private async Task<object> GetSpotifyUserProfile(string accessToken)
     {
         using (var client = _httpClientFactory.CreateClient())
         {
@@ -243,7 +247,7 @@ public async Task<IActionResult> Profile()
     [HttpGet]
     public async Task<JsonResult> GetArtistTrackData(string timeRange, string type, bool genres = false, int genreAmount = 10)
     {
-        var data = await GetDataBasedOnTimeFrameAsync(timeRange, type, genres, genreAmount);
+        var data = await GetDataBasedOnTimeFrame(timeRange, type, genres, genreAmount);
         return Json(data);
     }
 
@@ -251,7 +255,7 @@ public async Task<IActionResult> Profile()
     //the desired information. It also creates the endpoint and sends the data contents to either method.
     //timeRange : short_term, medium_term, long_term
     //type : artists, tracks
-    private async Task<object> GetDataBasedOnTimeFrameAsync(string timeRange, string type, bool genres, int genreAmount)
+    private async Task<object> GetDataBasedOnTimeFrame(string timeRange, string type, bool genres, int genreAmount)
     {
         var accessToken = await EnsureValidAccessTokenAsync();
         var client = _httpClientFactory.CreateClient();
@@ -269,8 +273,8 @@ public async Task<IActionResult> Profile()
         var content = await endPointResponse.Content.ReadAsStringAsync();
         return type switch
         {
-            "artists" => await ProcessArtistsResponseAsync(content, settings, genres, genreAmount),
-            "tracks" => await ProcessTracksResponseAsync(content, settings),
+            "artists" => await ProcessArtistsResponse(content, settings, genres, genreAmount),
+            "tracks" => await ProcessTracksResponse(content, settings),
             _ => new { message = "Invalid time frame or type." }
         };
     }
@@ -278,7 +282,7 @@ public async Task<IActionResult> Profile()
     //Converts the endpoint string information into my object for SpotifyTopArtists.
     //settings: json serialized settings for the endpoint.
     //content: api endpoint returned data in string format.
-    private Task<object> ProcessArtistsResponseAsync(string content, JsonSerializerSettings settings, bool genres, int genreAmount)
+    private Task<object> ProcessArtistsResponse(string content, JsonSerializerSettings settings, bool genres, int genreAmount)
     {
         var spotifyArtist = JsonConvert.DeserializeObject<SpotifyTopArtists>(content, settings);
         if (spotifyArtist == null)
@@ -332,7 +336,7 @@ public async Task<IActionResult> Profile()
     //Converts the endpoint string information into my object for SpotifyTopTracks.
     //settings: json serialized settings for the endpoint.
     //content: api endpoint returned data in string format.
-    private Task<object> ProcessTracksResponseAsync(string content, JsonSerializerSettings settings)
+    private Task<object> ProcessTracksResponse(string content, JsonSerializerSettings settings)
     {
         var spotifyTrack = JsonConvert.DeserializeObject<SpotifyTopTracks>(content, settings);
         if (spotifyTrack == null)
@@ -375,7 +379,6 @@ public async Task<IActionResult> Profile()
 
     }
 
-    //check if playlist exists already
     private async Task<object> CreatePlaylist()
     {
         try
@@ -419,6 +422,114 @@ public async Task<IActionResult> Profile()
         }
     }
 
+    public async Task<List<SpotifyTrack>> GetPlaylistTracks(string playlistId, string accessToken)
+    {
+
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var getTracksResponse = await client.GetAsync($"https://api.spotify.com/v1/playlists/{playlistId}/tracks");
+        if (!getTracksResponse.IsSuccessStatusCode)
+        {
+            var errorResponse = await getTracksResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to retrieve playlist tracks: {errorResponse}");
+        }
+
+        var getTracksResponseString = await getTracksResponse.Content.ReadAsStringAsync();
+        var playlistTracks = JsonConvert.DeserializeObject<SpotifyUserPlaylist>(getTracksResponseString);
+
+        if (playlistTracks == null || playlistTracks.Items == null)
+        {
+            throw new Exception("Failed to deserialize playlist tracks");
+        }
+
+        var tracks = playlistTracks.Items.Select(item => item.Track).ToList();
+        return tracks;
+    }
+
+
+    private async Task UpdatePlaylist(string playlistId, List<string> uris)
+        {
+            var (spotifyUser, accessToken) = await GetSpotifyClient();
+            if (spotifyUser == null || accessToken == null)
+            {
+                throw new Exception("Failed to retrieve Spotify client information");
+            }
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            try
+            {
+                // Step 1: Get the current tracks in the playlist using SpotifyService
+                var currentTracks = await GetPlaylistTracks(playlistId, accessToken);
+                var trackUrisToRemove = currentTracks.Select(track => new { uri = track.Uri, positions = new int[] { } }).ToList();
+
+                if (trackUrisToRemove.Count > 0)
+                {
+                    // Step 2: Remove all tracks from the playlist
+                    var removeTracksPayload = new { tracks = trackUrisToRemove };
+                    var removeTracksContent = new StringContent(JsonConvert.SerializeObject(removeTracksPayload), Encoding.UTF8, "application/json");
+                    var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"https://api.spotify.com/v1/playlists/{playlistId}/tracks")
+                    {
+                        Content = removeTracksContent
+                    };
+
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                    var clearResponse = await client.SendAsync(requestMessage);
+
+                    if (!clearResponse.IsSuccessStatusCode)
+                    {
+                        var clearResponseString = await clearResponse.Content.ReadAsStringAsync();
+                        throw new Exception("Error clearing playlist: " + clearResponseString);
+                    }
+                }
+
+                // Step 3: Add new tracks to the playlist
+                var addTracksPayload = new { uris = uris };
+                var addTracksContent = new StringContent(JsonConvert.SerializeObject(addTracksPayload), Encoding.UTF8, "application/json");
+                var addTracksResponse = await client.PostAsync($"https://api.spotify.com/v1/playlists/{playlistId}/tracks", addTracksContent);
+
+                if (!addTracksResponse.IsSuccessStatusCode)
+                {
+                    var addTracksResponseString = await addTracksResponse.Content.ReadAsStringAsync();
+                    throw new Exception("Error adding tracks to playlist: " + addTracksResponseString);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to update playlist", ex);
+            }
+    }
+
+    public async Task<object> GetSongURIList(string timeRange)
+    {
+        var allTracks = await GetDataBasedOnTimeFrame(timeRange, "tracks", false, 0);
+
+        return allTracks;
+    }
+
+    [HttpGet]
+    public async Task VerifyPlaylistFunction(string timeRange)
+    {
+        var test23 = timeRange;
+        var playlistResponse = GetUsersPlaylist().Result.ToString();
+
+        if (playlistResponse.Equals("Create"))
+        {
+            await CreatePlaylist();
+        }
+
+        var playlistId = await GetUsersPlaylist();
+
+        dynamic test = await GetSongURIList(timeRange);
+        var tracklist = (IEnumerable<SpotifyTrack>)test.tracks;
+        List<string> uriList = tracklist.Select(track => track.Uri).ToList();
+
+        await UpdatePlaylist((string)playlistId, uriList);
+
+    }
+
     [HttpGet]
     public async Task<object> GetUsersPlaylist()
     {
@@ -444,10 +555,15 @@ public async Task<IActionResult> Profile()
 
                 var playlistForeverWrapped = playlistUris.Items.Where(p => p.Name.Equals("PlaylistForeverWrapped")).ToList();
 
-                var playlistID = playlistForeverWrapped.FirstOrDefault().Id;
-                //send over the id for the playlist to update and modify it.
+                if (playlistForeverWrapped.Count == 0)
+                {
+                    return "Create";
+                }
 
-                return new { message = responseString };
+                var playlistID = playlistForeverWrapped.FirstOrDefault().Id;
+           
+
+                return playlistID;
             }
             else
             {
@@ -461,13 +577,6 @@ public async Task<IActionResult> Profile()
 
 
     }
-
-    public async Task<object> SaveToPlaylist()
-    {
-
-        return new { message = "Playlist Saved" };
-    }
-
 
 
 

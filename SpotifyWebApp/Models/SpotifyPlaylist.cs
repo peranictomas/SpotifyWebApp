@@ -10,5 +10,7 @@ namespace SpotifyWebApp.Models
         public string Name { get; set; }
         [JsonProperty("description")]
         public string Description { get; set; }
+        [JsonProperty("uri")]
+        public string Uri { get; set; }
     }
 }

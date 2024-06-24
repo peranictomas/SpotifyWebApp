@@ -9,6 +9,8 @@ namespace SpotifyWebApp.Models
 
         [JsonProperty("album")]
         public SpotifyAlbum Album { get; set; }
+        [JsonProperty("uri")]
+        public string Uri { get; set; }
       
     }
 }
