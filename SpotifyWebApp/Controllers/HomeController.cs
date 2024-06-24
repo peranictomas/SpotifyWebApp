@@ -37,20 +37,6 @@ public class HomeController : Controller
         return View();
     }
 
-   
-//public async Task<IActionResult> Index()
-//{
-//    var accessToken = await EnsureValidAccessTokenAsync();
-//    if (string.IsNullOrEmpty(accessToken))
-//    {
-//        return RedirectToAction("Logout");
-//    }
-//    else
-//    {
-//        return View();
-//    }
-//}
-
 //Displays the users profile statistics
 public async Task<IActionResult> Profile()
     {
@@ -179,68 +165,6 @@ public async Task<IActionResult> Profile()
         }
     }
 
-
-//This method will check if the users access token is still valid.
-//This is achieved through the use of the refresh token as well as checking
-//What time the token will expire at. If expired method will update the users access token,
-//refresh token, and the new expiry date.
-//private async Task<string> EnsureValidAccessTokenAsync()
-//{
-//    var accessToken = await HttpContext.GetTokenAsync("access_token");
-//    var refreshToken = await HttpContext.GetTokenAsync("refresh_token");
-//    var expiresAt = await HttpContext.GetTokenAsync("expires_at");
-
-//    if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(expiresAt))
-//    {
-//        throw new Exception("Tokens are missing in the session.");
-//    }
-
-//    if (DateTime.TryParse(expiresAt, out var expiryTime) && DateTime.UtcNow >= expiryTime)
-//    {
-//        // Token has expired, refresh it
-//        using (var client = _httpClientFactory.CreateClient())
-//        {
-//            var parameters = new Dictionary<string, string>
-//            {
-//                { "grant_type", "refresh_token" },
-//                { "refresh_token", refreshToken },
-//                { "client_id", "9d8836eff00a4ac49132fd687fa862a7" },
-//                { "client_secret", "0da6a9e4992a417ca8e9f81d77708cbe" }
-//            };
-
-//            var content = new FormUrlEncodedContent(parameters);
-//            var response = await client.PostAsync("https://accounts.spotify.com/api/token", content);
-
-//            if (response.IsSuccessStatusCode)
-//            {
-//                var responseString = await response.Content.ReadAsStringAsync();
-//                var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseString);
-
-//                // Log the new tokens.
-//                // Use the existing refresh token if it's not included in the response
-//                var newAccessToken = tokenResponse.AccessToken;
-//                var newRefreshToken = tokenResponse.RefreshToken ?? refreshToken;
-//                var newExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn).ToString();
-
-//                var authInfo = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-//                authInfo.Properties.UpdateTokenValue("access_token", newAccessToken);
-//                authInfo.Properties.UpdateTokenValue("refresh_token", newRefreshToken);
-//                authInfo.Properties.UpdateTokenValue("expires_at", newExpiresAt);
-
-//                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, authInfo.Principal, authInfo.Properties);
-
-//                return tokenResponse.AccessToken;
-//            }
-//            else
-//            {
-//                throw new Exception("Could not refresh access token.");
-//            }
-//        }
-//    }
-
-//    return accessToken;
-//}
-
     //This method is used to update the tab views to the proper time period selected and for their respective views.
     //timeRange : short_term, medium_term, long_term
     //type : artists, tracks
@@ -302,26 +226,6 @@ public async Task<IActionResult> Profile()
         }
         else
         {
-            //    SpotifyGenres test = new SpotifyGenres();
-
-            //    foreach (var artist in spotifyArtist.Items)
-            //    {
-            //        foreach(var genre in artist.Genres)
-            //        {
-            //            if (!test.Genres.ContainsKey(genre))
-            //            {
-            //                test.Genres.Add(genre, 1);
-            //            }
-            //            else
-            //            {
-            //                test.Genres[genre] += 1;
-            //            }
-            //        }
-
-
-            //    }
-            //    return Task.FromResult<object>(new { message = "Data retrieved successfully", artists = test.Genres.OrderByDescending(genre => genre.Value).Take(genreAmount)
-            //});
             var genreCounts = spotifyArtist.Items
            .SelectMany(artist => artist.Genres)
            .GroupBy(genre => genre)
@@ -359,6 +263,7 @@ public async Task<IActionResult> Profile()
         return Task.FromResult<object>(new { message = "Data retrieved successfully", tracks = spotifyTrack.Items });
     }
 
+    //Returns the instance of the user and the users access token (used to retreive the users id in other methods)
     private async Task<(SpotifyUser User, string AccessToken)> GetSpotifyClient()
     {
         var accessToken = await EnsureValidAccessTokenAsync();
@@ -379,49 +284,45 @@ public async Task<IActionResult> Profile()
 
     }
 
+    //Creates an empty playlist with the name foreverwrapped
     private async Task<object> CreatePlaylist()
     {
-        try
+        var (spotifyUser, accessToken) = await GetSpotifyClient();
+        if (spotifyUser == null || accessToken == null)
         {
-            var (spotifyUser, accessToken) = await GetSpotifyClient();
-            if (spotifyUser == null || accessToken == null)
-            {
-                return new { message = "Failed to retrieve Spotify client information" };
-            }
+            return new { message = "Failed to retrieve Spotify client information" };
+        }
 
-            var userId = spotifyUser.ID;
+        var userId = spotifyUser.ID;
 
-            var values = new Dictionary<string, string>
+        var values = new Dictionary<string, string>
         {
-            { "name", "PlaylistForeverWrapped" },
-            { "description", "Playlist From Forever Wrapped" },
-            { "public", "false" }
+            { "name", "ForeverWrapped" },
+            { "description", "Playlist created by Forever Wrapped" },
+            { "public", "true" }
         };
 
-            var json = JsonConvert.SerializeObject(values);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var json = JsonConvert.SerializeObject(values);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            var response = await client.PostAsync($"https://api.spotify.com/v1/users/{userId}/playlists", content);
-            var responseString = await response.Content.ReadAsStringAsync();
+        var response = await client.PostAsync($"https://api.spotify.com/v1/users/{userId}/playlists", content);
+        var responseString = await response.Content.ReadAsStringAsync();
 
-            if (response.IsSuccessStatusCode)
-            {
-                return new { message = "Playlist created successfully" };
-            }
-            else
-            {
-                return new { message = "Failed to create playlist. Error: " + responseString };
-            }
-        }
-        catch (Exception ex)
+        if (response.IsSuccessStatusCode)
         {
-            return new { message = "An error occurred: " + ex.Message };
+            return new { message = "Playlist created successfully" };
         }
+        else
+        {
+            return new { message = "Failed to create playlist. Error: " + responseString };
+        }
+        
     }
 
+    //Returns a list of tracks that are currently in the spotify playlist
     public async Task<List<SpotifyTrack>> GetPlaylistTracks(string playlistId, string accessToken)
     {
 
@@ -447,7 +348,7 @@ public async Task<IActionResult> Profile()
         return tracks;
     }
 
-
+    //This method will update the playlist ForeverWrapped, deletes everything in the playlist then readds the desired tracks to it given the time range
     private async Task UpdatePlaylist(string playlistId, List<string> uris)
         {
             var (spotifyUser, accessToken) = await GetSpotifyClient();
@@ -459,60 +360,55 @@ public async Task<IActionResult> Profile()
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            try
+            // Step 1: Get the current tracks in the playlist 
+            var currentTracks = await GetPlaylistTracks(playlistId, accessToken);
+            var trackUrisToRemove = currentTracks.Select(track => new { uri = track.Uri, positions = new int[] { } }).ToList();
+
+            if (trackUrisToRemove.Count > 0)
             {
-                // Step 1: Get the current tracks in the playlist using SpotifyService
-                var currentTracks = await GetPlaylistTracks(playlistId, accessToken);
-                var trackUrisToRemove = currentTracks.Select(track => new { uri = track.Uri, positions = new int[] { } }).ToList();
-
-                if (trackUrisToRemove.Count > 0)
+                // Step 2: Remove all tracks from the playlist
+                var removeTracksPayload = new { tracks = trackUrisToRemove };
+                var removeTracksContent = new StringContent(JsonConvert.SerializeObject(removeTracksPayload), Encoding.UTF8, "application/json");
+                var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"https://api.spotify.com/v1/playlists/{playlistId}/tracks")
                 {
-                    // Step 2: Remove all tracks from the playlist
-                    var removeTracksPayload = new { tracks = trackUrisToRemove };
-                    var removeTracksContent = new StringContent(JsonConvert.SerializeObject(removeTracksPayload), Encoding.UTF8, "application/json");
-                    var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"https://api.spotify.com/v1/playlists/{playlistId}/tracks")
-                    {
-                        Content = removeTracksContent
-                    };
+                    Content = removeTracksContent
+                };
 
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                    var clearResponse = await client.SendAsync(requestMessage);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var clearResponse = await client.SendAsync(requestMessage);
 
-                    if (!clearResponse.IsSuccessStatusCode)
-                    {
-                        var clearResponseString = await clearResponse.Content.ReadAsStringAsync();
-                        throw new Exception("Error clearing playlist: " + clearResponseString);
-                    }
-                }
-
-                // Step 3: Add new tracks to the playlist
-                var addTracksPayload = new { uris = uris };
-                var addTracksContent = new StringContent(JsonConvert.SerializeObject(addTracksPayload), Encoding.UTF8, "application/json");
-                var addTracksResponse = await client.PostAsync($"https://api.spotify.com/v1/playlists/{playlistId}/tracks", addTracksContent);
-
-                if (!addTracksResponse.IsSuccessStatusCode)
+                if (!clearResponse.IsSuccessStatusCode)
                 {
-                    var addTracksResponseString = await addTracksResponse.Content.ReadAsStringAsync();
-                    throw new Exception("Error adding tracks to playlist: " + addTracksResponseString);
+                    var clearResponseString = await clearResponse.Content.ReadAsStringAsync();
+                    throw new Exception("Error clearing playlist: " + clearResponseString);
                 }
             }
-            catch (Exception ex)
+
+            // Step 3: Add new tracks to the playlist
+            var addTracksPayload = new { uris = uris };
+            var addTracksContent = new StringContent(JsonConvert.SerializeObject(addTracksPayload), Encoding.UTF8, "application/json");
+            var addTracksResponse = await client.PostAsync($"https://api.spotify.com/v1/playlists/{playlistId}/tracks", addTracksContent);
+
+            if (!addTracksResponse.IsSuccessStatusCode)
             {
-                throw new Exception("Failed to update playlist", ex);
+                var addTracksResponseString = await addTracksResponse.Content.ReadAsStringAsync();
+                throw new Exception("Error adding tracks to playlist: " + addTracksResponseString);
             }
+           
     }
 
+    //Returns a list of all tracks that the user has selected
     public async Task<object> GetSongURIList(string timeRange)
     {
         var allTracks = await GetDataBasedOnTimeFrame(timeRange, "tracks", false, 0);
 
         return allTracks;
     }
-
+    
+    //For the Save Tracks to Playlist button for Home/Tracks view
     [HttpGet]
     public async Task VerifyPlaylistFunction(string timeRange)
     {
-        var test23 = timeRange;
         var playlistResponse = GetUsersPlaylist().Result.ToString();
 
         if (playlistResponse.Equals("Create"))
@@ -522,6 +418,7 @@ public async Task<IActionResult> Profile()
 
         var playlistId = await GetUsersPlaylist();
 
+        //Gets a list of all the current tracks URIs for a given time range the user selected
         dynamic test = await GetSongURIList(timeRange);
         var tracklist = (IEnumerable<SpotifyTrack>)test.tracks;
         List<string> uriList = tracklist.Select(track => track.Uri).ToList();
@@ -530,11 +427,12 @@ public async Task<IActionResult> Profile()
 
     }
 
+    //This method will get all the users playlist and check if they have a playlist already called ForeverWrapped
+    //if not it will create one with that name. If you already have one then continue to saving the desired songs.
+    //This method returns only the playlist ID for ForeverWrapped
     [HttpGet]
     public async Task<object> GetUsersPlaylist()
     {
-        try
-        {
             var (spotifyUser, accessToken) = await GetSpotifyClient();
             if (spotifyUser == null || accessToken == null)
             {
@@ -553,7 +451,7 @@ public async Task<IActionResult> Profile()
 
                 var playlistUris = JsonConvert.DeserializeObject<SpotifyUsersPlaylists>(responseString);
 
-                var playlistForeverWrapped = playlistUris.Items.Where(p => p.Name.Equals("PlaylistForeverWrapped")).ToList();
+                var playlistForeverWrapped = playlistUris.Items.Where(p => p.Name.Equals("ForeverWrapped")).ToList();
 
                 if (playlistForeverWrapped.Count == 0)
                 {
@@ -567,18 +465,8 @@ public async Task<IActionResult> Profile()
             }
             else
             {
-                return new { message = "Failed to create playlist. Error: " + responseString };
+                return  null;
             }
-        }
-        catch (Exception ex)
-        {
-            return new { message = "An error occurred: " + ex.Message };
-        }
-
-
     }
-
-
-
 
 }

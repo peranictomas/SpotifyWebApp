@@ -17,5 +17,4 @@ public class SpotifyUser
     public string AccountType { get; set; }
     [JsonProperty("followers")]
     public SpotifyFollowers Followers { get; set; }
-    // Add other properties as needed
 }
