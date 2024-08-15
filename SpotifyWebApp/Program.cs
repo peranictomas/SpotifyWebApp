@@ -86,11 +86,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-else
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+//else
+//{
+//    app.UseExceptionHandler("/Home/Error");
+//    app.UseHsts();
+//}
 
 if (app.Environment.IsProduction())
 {
