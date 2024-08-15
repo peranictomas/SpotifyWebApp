@@ -27,6 +27,7 @@ builder.Services.AddAuthentication(options =>
     options.CallbackPath = new Microsoft.AspNetCore.Http.PathString("/signin-spotify");
     options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
     options.TokenEndpoint = "https://accounts.spotify.com/api/token";
+    //options.RedirectUri = Environment.GetEnvironmentVariable("SPOTIFY_REDIRECT_URI") ?? "http://localhost:5000/signin-spotify";
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
     options.Scope.Add("user-top-read");
@@ -38,6 +39,15 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.MapJsonKey("urn:spotify:email", "email");
     options.Events = new OAuthEvents
     {
+
+        OnRedirectToAuthorizationEndpoint = async context =>
+        {
+            var baseUrl = builder.Configuration["BaseUrl"] ?? "https://localhost:7196";
+            var redirectUri = $"{baseUrl}{options.CallbackPath}";
+            context.Response.Redirect(redirectUri);
+            return Task.CompletedTask;
+        },
+
         OnCreatingTicket = async context =>
         {
             var accessToken = context.AccessToken;
