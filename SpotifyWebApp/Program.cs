@@ -45,7 +45,7 @@ builder.Services.AddAuthentication(options =>
             var baseUrl = builder.Configuration["BaseUrl"] ?? "https://localhost:7196";
             var redirectUri = $"{baseUrl}{options.CallbackPath}";
             context.Response.Redirect(redirectUri);
-            return Task.CompletedTask;
+            await Task.CompletedTask;
         },
 
         OnCreatingTicket = async context =>
