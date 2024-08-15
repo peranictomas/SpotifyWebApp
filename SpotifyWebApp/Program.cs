@@ -22,8 +22,8 @@ builder.Services.AddAuthentication(options =>
 .AddCookie()
 .AddOAuth("Spotify", options =>
 {
-    options.ClientId = "9d8836eff00a4ac49132fd687fa862a7";
-    options.ClientSecret = "0da6a9e4992a417ca8e9f81d77708cbe";
+    options.ClientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID");
+    options.ClientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET");
     options.CallbackPath = new Microsoft.AspNetCore.Http.PathString("/signin-spotify");
     options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
     options.TokenEndpoint = "https://accounts.spotify.com/api/token";
