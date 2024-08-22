@@ -22,12 +22,11 @@ builder.Services.AddAuthentication(options =>
 .AddCookie()
 .AddOAuth("Spotify", options =>
 {
-    options.ClientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID");
-    options.ClientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET");
+    options.ClientId = "9d8836eff00a4ac49132fd687fa862a7";
+    options.ClientSecret = "0da6a9e4992a417ca8e9f81d77708cbe";
     options.CallbackPath = new Microsoft.AspNetCore.Http.PathString("/signin-spotify");
     options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
     options.TokenEndpoint = "https://accounts.spotify.com/api/token";
-    //options.RedirectUri = Environment.GetEnvironmentVariable("SPOTIFY_REDIRECT_URI") ?? "http://localhost:5000/signin-spotify";
     options.Scope.Add("user-read-private");
     options.Scope.Add("user-read-email");
     options.Scope.Add("user-top-read");
@@ -39,15 +38,6 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.MapJsonKey("urn:spotify:email", "email");
     options.Events = new OAuthEvents
     {
-
-        OnRedirectToAuthorizationEndpoint = async context =>
-        {
-            var baseUrl = builder.Configuration["BaseUrl"] ?? "https://localhost:7196";
-            var redirectUri = $"{baseUrl}{options.CallbackPath}";
-            context.Response.Redirect(redirectUri);
-            await Task.CompletedTask;
-        },
-
         OnCreatingTicket = async context =>
         {
             var accessToken = context.AccessToken;
@@ -86,19 +76,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-//else
-//{
-//    app.UseExceptionHandler("/Home/Error");
-//    app.UseHsts();
-//}
-
-if (app.Environment.IsProduction())
+else
 {
-    var port = Environment.GetEnvironmentVariable("PORT");
-    if (port != null)
-    {
-        app.Urls.Add($"http://*:{port}");
-    }
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
