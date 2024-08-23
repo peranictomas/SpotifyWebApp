@@ -82,6 +82,13 @@ else
     app.UseHsts();
 }
 
+if (app.Environment.IsProduction())
+{
+    var port = Environment.GetEnvironmentVariable("PORT");
+    app.Urls.Add($"https://*:{port}");
+}
+
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
