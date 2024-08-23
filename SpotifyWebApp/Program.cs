@@ -85,7 +85,7 @@ else
 if (app.Environment.IsProduction())
 {
     var port = Environment.GetEnvironmentVariable("PORT");
-    app.Urls.Add($"https://*:{port}");
+    app.Urls.Add($"http://*:{port}");
 }
 
 
