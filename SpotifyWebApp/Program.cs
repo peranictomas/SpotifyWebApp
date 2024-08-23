@@ -24,7 +24,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.ClientId = "9d8836eff00a4ac49132fd687fa862a7";
     options.ClientSecret = "0da6a9e4992a417ca8e9f81d77708cbe";
-    options.CallbackPath = new Microsoft.AspNetCore.Http.PathString("/signin-spotify");
+    options.CallbackPath = "/signin-spotify";
     options.AuthorizationEndpoint = "https://accounts.spotify.com/authorize";
     options.TokenEndpoint = "https://accounts.spotify.com/api/token";
     options.Scope.Add("user-read-private");
